@@ -703,7 +703,7 @@ function decoderGeohash(h){
   return { lat: (lat[0] + lat[1]) / 2, lon: (lon[0] + lon[1]) / 2 };
 }
 async function lireLienWaze(texte){
-  const t = decodeURIComponent(texte.replace(/\+/g, " "));
+  let t = texte.replace(/\+/g, " "); try { t = decodeURIComponent(t); } catch(e){}   // un « % » isolé ferait planter
   let pos = null;
   const m = t.match(/(?:ll|to=ll|latlng|q)[=.]\s*(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/i)   // ll=45.4,-71.9
          || t.match(/(-?\d{1,2}\.\d{3,})\s*,\s*(-?\d{1,3}\.\d{3,})/);                       // 45.4012, -71.9123
@@ -719,10 +719,66 @@ async function lireLienWaze(texte){
     .replace(/^\s*(utilise waze pour (te rendre|aller|y aller)( à| au| aux| chez)?|je suis en route vers|je m'en vais à|use waze to (drive|navigate|get) to|on my way to|i'?m on my way to)\s*/i, "")
     .replace(/\s+/g, " ").replace(/^[\s:,.-]+|[\s:,.-]+$/g, "");
   const auQuebec = p => p.lat > 44 && p.lat < 63 && p.lon > -80 && p.lon < -57;
+  // « Partager mon trajet » (lien ...?a=sd3&token=...) : PAS de coordonnées, seulement un jeton privé de Waze.
+  // On prend le nom du lieu dans le message : « J'arriverai à 18:53 à Royal Pyrotechnie Inc.. Suivez mon trajet… »
+  if (!pos){
+    const msg = t.match(/arriver(?:ai|a|ons)\s+(?:à|vers)\s+\d{1,2}\s*[:h]\s*\d{2}\s+(?:à|au|aux|chez)\s+(.+?)\.?\s*(?:suivez|suis|https?:|$)/i)
+             || t.match(/arrive\s+(?:at|by|around)\s+[\d:]+\s*(?:[ap]\.?m\.?)?\s+(?:at|to)\s+(.+?)\.?\s*(?:follow|https?:|$)/i);
+    if (msg){
+      const nom = msg[1].trim().replace(/\.+$/, "");
+      const d = await chercherLieu(nom);
+      if (d) return d;
+      const err = new Error(`Je ne connais pas « ${nom} ».`); err.inconnu = nom; throw err;
+    }
+  }
   if (pos && auQuebec(pos)) return { nom: reste && reste.length <= 60 ? reste : await nomDuLieu(pos), lat: pos.lat, lon: pos.lon };
   if (pos && !reste) throw new Error("Ce lien Waze pointe en dehors du Québec.");
   if (reste && !/waze\.com/i.test(reste)) return chercherDestination(reste);
   throw new Error("Je ne trouve pas la destination dans ce lien Waze. Écris plutôt la ville ou l'adresse.");
+}
+// Cherche un lieu par son nom (commerce, entreprise…) :
+// 1) un lieu déjà appris (récentes, favoris) ; 2) OpenStreetMap (Nominatim) ; 3) Photon, meilleur pour les commerces
+async function chercherLieu(nom){
+  const pareil = d => d.nom.localeCompare(nom, "fr", { sensitivity: "base" }) === 0;
+  const connu = [...(R.favoris || []), ...(R.recentes || []), ...(R.lieux || [])].find(pareil);
+  if (connu) return connu;
+  try {
+    const d = await chercherDestination(nom);
+    if (d) return { nom, lat: d.lat, lon: d.lon };
+  } catch(e){}
+  try {
+    const pres = position ? `&lat=${position.lat}&lon=${position.lon}` : "";
+    const j = await (await fetch(`https://photon.komoot.io/api/?limit=5&q=${encodeURIComponent(nom)}${pres}`)).json();
+    // Photon devine large (« Royal Pyrotechnie Inc » → « Mount Royal Tennis Club Inc » !) :
+    // on exige que TOUS les mots distinctifs du nom soient dans le nom trouvé.
+    const mots = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().split(/[^a-z0-9]+/)
+      .filter(m => m.length >= 3 && !["inc", "ltee", "ltd", "enr", "les", "des", "the", "cie"].includes(m));
+    const voulus = mots(nom);
+    for (const f of (j.features || [])){
+      const [lon, lat] = f.geometry.coordinates, trouves = new Set(mots(f.properties.name));
+      if (voulus.length && voulus.every(m => trouves.has(m)) && lat > 44 && lat < 63 && lon > -80 && lon < -57) return { nom, lat, lon };
+    }
+  } catch(e){}
+  return null;
+}
+// Lieu inconnu : on demande « c'est où ? » une fois, puis on retient la réponse sous le nom donné par Waze
+function demanderOuEst(nom){
+  $("#contenu").innerHTML = `<div class="msg"><p><strong>Je ne connais pas « ${esc(nom)} ».</strong></p>
+    <p>C'est dans quelle ville, ou à quelle adresse ? Je vais m'en souvenir pour la prochaine fois.</p>
+    <form class="dest" id="form-ou" autocomplete="off">
+      <input id="ou-q" list="villes" placeholder="Ex. : Magog, ou 100 rue Principale, Magog" enterkeyhint="go" aria-label="Ville ou adresse de ${esc(nom)}">
+      <button type="submit">OK</button>
+    </form></div>`;
+  $("#ou-q").focus();
+  $("#form-ou").onsubmit = async e => {
+    e.preventDefault();
+    const q = $("#ou-q").value.trim(); if (!q) return;
+    const d = await chercherDestination(q).catch(() => null);
+    if (!d){ $("#ou-q").value = ""; $("#ou-q").placeholder = `Introuvable : « ${q} ». Essaie juste la ville.`; return; }
+    const lieu = { nom, lat: d.lat, lon: d.lon };
+    R.lieux = [lieu, ...(R.lieux || []).filter(x => x.nom !== nom)].slice(0, 30);   // carnet des lieux appris
+    retenirDestination(lieu); afficher();
+  };
 }
 // Nom lisible pour des coordonnées (Nominatim « reverse ») ; « Destination Waze » si ça ne répond pas
 async function nomDuLieu(p){
@@ -753,6 +809,7 @@ async function choisirDestinationTexte(q){
     retenirDestination(d); $("#dest-q").value = ""; $("#dest-q").blur();
     afficher();
   } catch(err){
+    if (err.inconnu){ $("#dest-q").value = ""; $("#dest-q").blur(); demanderOuEst(err.inconnu); return; }
     $("#contenu").innerHTML = `<div class="msg erreur"><p>${esc(err.message)}</p></div>`;
   } finally { bouton.disabled = false; bouton.textContent = "Go"; }
 }

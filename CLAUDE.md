@@ -43,7 +43,12 @@ on ne l'utilise pas (son API interne exige un jeton).
   bouton « Coller ma destination de Waze » (lit le presse-papier ; Waze → destination → Partager → Copier),
   coller un lien waze.com dans la case part tout seul, ★ favoris + récentes en puces. `lireLienWaze` comprend
   `ll=lat,lon`, `to=ll.lat,lon`, geohash `waze.com/ul/h…`, sinon cherche l'adresse écrite dans le texte.
-  **Format réel du lien partagé par le Waze de JF : pas encore vérifié** → demander un exemple si ça échoue.
+  **Format réel vu chez JF (2026-11-26)** : « Partager mon trajet » donne
+  `J'arriverai à 18:53 à <LIEU>.. Suivez mon trajet sur Waze : https://www.waze.com/ul?a=sd3&token=…` → AUCUNE
+  coordonnée (jeton privé ; la page Waze ne fait que rediriger vers l'app). On lit donc <LIEU> dans le message,
+  puis : lieux appris (`R.lieux`) / récentes / favoris → Nominatim → Photon (`photon.komoot.io`, CORS ouvert ;
+  tous les mots distinctifs du nom doivent correspondre, sinon faux positifs). Introuvable → on demande
+  « c'est où ? » une fois et on retient la réponse sous le nom Waze.
 - Exclure Costco (membres), position manuelle (ville) si GPS refusé.
 - **Thèmes festifs** (demande de JF : « design festif qui change ») : choisis selon la date (`FETES` dans le script,
   couleurs dans le CSS `:root[data-fete=…]`). Noël 20 nov.–6 janv. (neige, guirlande, chapeau de neige,
