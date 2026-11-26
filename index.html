@@ -171,12 +171,93 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 @keyframes glisse{from{transform:translateX(-100%)}to{transform:translateX(300%)}}
 @media (prefers-reduced-motion:reduce){.charge i{animation:none;width:100%}}
 footer{margin-top:18px}
+
+/* ═════════════════════════════════════════════════════════════
+   THÈMES FESTIFS : changent tout seuls selon la date (voir FETES dans le script).
+   <html data-fete="noel|halloween|valentin|patrick|stjean"> ; rien = thème sobre.
+   ═════════════════════════════════════════════════════════════ */
+h1{white-space:nowrap}
+.slogan{display:block;white-space:normal;font:600 .8rem var(--body);color:var(--muted);margin-top:4px;letter-spacing:0}
+.slogan:empty{display:none}
+#fete-emoji{display:inline-block;margin-left:6px;transform-origin:50% 90%}
+/* Bouton choisi des segments : couleur de la fête */
+[data-fete] .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+[data-fete] .reco{background:var(--reco-bg,var(--accent));color:#fff;--accent-fg:#fff;box-shadow:0 8px 24px -10px var(--accent)}
+[data-fete] .reco .btn.principal{background:#fff;color:var(--reco-txt,var(--accent))}
+[data-fete] .reco .puce{background:rgba(255,255,255,.18)!important}
+
+/* Particules qui tombent (flocons, chauves-souris, cœurs…) : décor seulement, ne bloquent pas les clics */
+#particules{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:900}
+#particules i{position:absolute;top:-30px;font-style:normal;opacity:var(--o,.75);color:#fff;text-shadow:0 0 3px rgba(40,80,140,.55);
+  animation:tombe var(--d,12s) linear var(--delai,0s) infinite;will-change:transform}
+@keyframes tombe{
+  from{transform:translate(0,-5vh) rotate(0)}
+  50%{transform:translate(var(--x,20px),50vh) rotate(var(--r,90deg))}
+  to{transform:translate(0,105vh) rotate(calc(var(--r,90deg)*2))}
+}
+
+/* Guirlande de lumières de Noël en haut de l'écran */
+#guirlande{position:fixed;top:0;left:0;right:0;height:26px;pointer-events:none;z-index:901;display:flex;justify-content:space-around;
+  padding-top:env(safe-area-inset-top,0px)}
+#guirlande::before{content:"";position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top,0px) - 4px);height:14px;
+  border-bottom:2px solid #2b3a2f;border-radius:0 0 50% 50%/0 0 100% 100%}
+#guirlande b{position:relative;top:7px;width:9px;height:13px;border-radius:50% 50% 50% 50%/40% 40% 60% 60%;background:var(--c);
+  box-shadow:0 0 10px 2px var(--c);animation:scintille 1.6s ease-in-out var(--delai) infinite alternate}
+#guirlande b::before{content:"";position:absolute;top:-3px;left:2px;width:5px;height:4px;background:#3c4a40;border-radius:1px}
+#guirlande b:nth-child(odd){top:9px}
+@keyframes scintille{from{opacity:1}to{opacity:.35;box-shadow:none}}
+[data-fete="noel"] body{padding-top:calc(18px + env(safe-area-inset-top,0px))}
+
+/* ── Noël : rouge canneberge, vert sapin, or ── */
+:root[data-fete="noel"]{--accent:#c8172a;--accent-fg:#fff;--reco-bg:linear-gradient(140deg,#d61f33 0%,#a3121f 55%,#7d0c16 100%);
+  --reco-txt:#a3121f;--moi:#1a73e8}
+[data-fete="noel"] h1{color:var(--accent)}
+[data-fete="noel"] .reco{position:relative;margin-top:16px;padding-top:22px}
+/* Chapeau de neige sur la carte « Va ici » */
+[data-fete="noel"] .reco::before{content:"";position:absolute;left:-3px;right:-3px;top:-9px;height:24px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 24' preserveAspectRatio='none'%3E%3Cpath d='M0 10 Q4 0 14 4 Q22 -1 32 5 Q40 1 48 6 Q58 0 68 5 Q78 -1 88 5 Q98 0 106 5 Q116 1 120 8 L120 14 Q114 22 108 16 Q104 24 96 15 Q88 21 82 14 Q74 20 66 14 Q60 23 52 15 Q44 20 38 14 Q30 22 24 15 Q16 21 10 14 Q4 20 0 16Z' fill='%23fff'/%3E%3C/svg%3E") 0 0/100% 100% no-repeat;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.18))}
+[data-fete="noel"] .reco .eyebrow::before{content:"⭐ "}
+/* Rabais emballés comme un cadeau : bordure en canne de bonbon */
+[data-fete="noel"] .rabais-barre{border:3px solid transparent;
+  background:linear-gradient(var(--rabais-bg),var(--rabais-bg)) padding-box,repeating-linear-gradient(45deg,#c8172a 0 9px,#fff 9px 18px) border-box}
+[data-fete="noel"] .mini{border-top:4px solid #1f7a45}
+[data-fete="noel"] .mini + .mini{border-top-color:#c8172a}
+[data-fete="noel"] .pin.top::before{content:"🎁 ";font-size:.8em}
+/* Un cadeau sur chaque économie */
+[data-fete="noel"] .eco.plus::before{content:"🎁 "}
+[data-fete="noel"] .economie{white-space:nowrap;background:rgba(255,255,255,.2);border-radius:8px;padding:1px 6px}
+[data-fete="noel"] .economie::before{content:"🎁 "}
+[data-fete="noel"] ol.liste{border-top:4px solid #1f7a45}
+
+/* ── Halloween : citrouille et violet ── */
+:root[data-fete="halloween"]{--accent:#ef7d1a;--accent-fg:#1d0b00;--reco-bg:linear-gradient(140deg,#ff8c1f,#c4520a 60%,#5b1f78);--reco-txt:#7a2e00}
+[data-fete="halloween"] h1{color:var(--accent)}
+
+/* ── Saint-Valentin : rose ── */
+:root[data-fete="valentin"]{--accent:#d6336c;--accent-fg:#fff;--reco-bg:linear-gradient(140deg,#f06595,#c2255c);--reco-txt:#c2255c}
+[data-fete="valentin"] h1{color:var(--accent)}
+
+/* ── Saint-Patrick : trèfle ── */
+:root[data-fete="patrick"]{--accent:#2b9348;--accent-fg:#fff;--reco-bg:linear-gradient(140deg,#38b000,#1b6b2f);--reco-txt:#1b6b2f}
+[data-fete="patrick"] h1{color:var(--accent)}
+
+/* ── Fête nationale : bleu et blanc ── */
+:root[data-fete="stjean"]{--accent:#1b4fa0;--accent-fg:#fff;--reco-bg:linear-gradient(140deg,#2563c4,#123a7a);--reco-txt:#123a7a}
+@media (prefers-color-scheme:dark){:root[data-fete="stjean"]:not([data-theme="light"]){--accent:#5b8ef0;--accent-fg:#071a3d}}
+[data-fete="stjean"] h1{color:var(--accent)}
+
+/* Mouvement réduit (réglage d'accessibilité de l'iPhone) : pas d'animation */
+@media (prefers-reduced-motion:reduce){#particules{display:none}#guirlande b{animation:none}}
 </style>
 </head>
 <body>
+<!-- Décor festif (rempli par appliquerFete) -->
+<div id="particules" aria-hidden="true"></div>
+<div id="guirlande" aria-hidden="true" hidden></div>
 <div class="wrap">
   <header>
-    <h1>Plein futé</h1>
+    <h1>Plein futé<span id="fete-emoji" aria-hidden="true"></span><span class="slogan" id="slogan"></span></h1>
     <div style="display:flex;gap:8px;align-items:center">
       <div class="statut" id="statut" aria-live="polite"></div>
       <button class="icone-btn" id="btn-rafraichir" aria-label="Rafraîchir la position et les prix">
@@ -257,6 +338,19 @@ footer{margin-top:18px}
       </select>
     </div>
 
+    <div class="champ">
+      <label for="r-fete">Thème festif</label>
+      <select id="r-fete">
+        <option value="auto">Automatique (selon la date)</option>
+        <option value="noel">🎄 Noël</option>
+        <option value="valentin">💗 Saint-Valentin</option>
+        <option value="patrick">☘️ Saint-Patrick</option>
+        <option value="stjean">⚜️ Fête nationale</option>
+        <option value="halloween">🎃 Halloween</option>
+        <option value="aucun">Sobre (aucun)</option>
+      </select>
+    </div>
+
     <h4>Mon véhicule</h4>
     <div class="champ">
       <label for="r-reservoir">Capacité du réservoir (litres)</label>
@@ -321,7 +415,7 @@ const TAMPON_ROUTE_KM = 2;           // « sur ma route » : stations à moins d
 // ── Réglages (gardés dans le téléphone) ──────────────────────
 const DEFAUTS = {
   mode: "autour", carburant: "Régulier", rayon: 10, niveau: 0.25, reservoir: 60, conso: 9,
-  ville: "", sansCostco: false, app: "waze", destination: null, recentes: [],
+  ville: "", sansCostco: false, app: "waze", destination: null, recentes: [], fete: "auto",
   rabais: [ { nom: "RBC", marque: "Petro-Canada", c: 3 }, { nom: "CIBC", marque: "Ultramar", c: 3 } ]
 };
 function lireReglages(){
@@ -335,6 +429,59 @@ function lireReglages(){
 function sauverReglages(){ try { localStorage.setItem("pleinfute", JSON.stringify(R)); } catch(e){} }
 const R = lireReglages();
 const litresAMettre = () => Math.max(5, Math.round(R.reservoir * (1 - R.niveau)));
+
+// ── Thèmes festifs ───────────────────────────────────────────
+// du/au = [mois, jour] (inclus). Noël chevauche le jour de l'An : du 20 nov. au 6 janv.
+// Pour ajouter une fête : une ligne ici + ses couleurs dans le CSS (:root[data-fete="..."]).
+const FETES = {
+  noel:      { du: [11, 20], au: [1, 6],   emoji: "🎄", particules: ["❄", "❅", "❆", "❄"], nb: 26, guirlande: true,
+               slogans: ["Joyeuses fêtes !", "Le père Noël fait le plein ici 🎅", "Ho ho ho… et 3 ¢ de rabais !",
+                         "Même le traîneau a besoin d'essence", "Un plein sous le sapin ?", "Bonne et heureuse année !"] },
+  valentin:  { du: [2, 7],   au: [2, 14],  emoji: "💗", particules: ["💗", "💕", "❤️"], nb: 14,
+               slogans: ["Un plein d'amour ♥", "Pour ma station préférée", "Bonne Saint-Valentin !"] },
+  patrick:   { du: [3, 14],  au: [3, 17],  emoji: "☘️", particules: ["☘️", "🍀"], nb: 12,
+               slogans: ["Bonne Saint-Patrick !", "La chance du prix le plus bas 🍀"] },
+  stjean:    { du: [6, 17],  au: [6, 24],  emoji: "⚜️", particules: ["⚜️", "⚜️", "✦"], nb: 14,
+               slogans: ["Bonne Fête nationale !", "Gens du pays, faites le plein ⚜️"] },
+  halloween: { du: [10, 18], au: [10, 31], emoji: "🎃", particules: ["🦇", "🍂", "🦇", "🎃"], nb: 12,
+               slogans: ["Des prix à faire peur 👻", "Pas de mauvais sort à la pompe", "Joyeuse Halloween !"] }
+};
+// Quelle fête aujourd'hui ? (null = thème sobre)
+function feteDuJour(d = new Date()){
+  const n = (d.getMonth() + 1) * 100 + d.getDate();          // ex. 26 nov. → 1126
+  for (const [cle, f] of Object.entries(FETES)){
+    const du = f.du[0] * 100 + f.du[1], au = f.au[0] * 100 + f.au[1];
+    if (du <= au ? (n >= du && n <= au) : (n >= du || n <= au)) return cle;   // du > au : passe le 31 déc.
+  }
+  return null;
+}
+function appliquerFete(){
+  const cle = R.fete === "auto" ? feteDuJour() : (FETES[R.fete] ? R.fete : null);
+  const f = FETES[cle];
+  if (cle) document.documentElement.dataset.fete = cle; else delete document.documentElement.dataset.fete;
+  $("#fete-emoji").textContent = f ? f.emoji : "";
+  // Un slogan différent à chaque ouverture
+  $("#slogan").textContent = f ? f.slogans[Math.floor(Math.random() * f.slogans.length)] : "";
+  // Particules : position, taille, vitesse et dérive au hasard
+  const box = $("#particules"); box.innerHTML = "";
+  for (let i = 0; f && i < f.nb; i++){
+    const p = document.createElement("i");
+    const d = 9 + Math.random() * 10;
+    p.textContent = f.particules[i % f.particules.length];
+    p.style.cssText = `left:${Math.random() * 100}%;font-size:${10 + Math.random() * 14}px;--d:${d}s;--delai:${-Math.random() * d}s;`
+      + `--x:${(Math.random() * 60 - 30).toFixed(0)}px;--r:${(Math.random() * 180 - 90).toFixed(0)}deg;--o:${(.45 + Math.random() * .45).toFixed(2)}`;
+    box.append(p);
+  }
+  // Guirlande de lumières (Noël) : rouge, or, vert, bleu
+  const g = $("#guirlande"); g.innerHTML = ""; g.hidden = !(f && f.guirlande);
+  if (f && f.guirlande){
+    const couleurs = ["#ff3b3b", "#ffc93c", "#3ddc6b", "#4aa8ff"];
+    const nb = Math.max(8, Math.round(innerWidth / 34));
+    for (let i = 0; i < nb; i++) g.insertAdjacentHTML("beforeend", `<b style="--c:${couleurs[i % 4]};--delai:${(i % 3) * .5 + Math.random() * .4}s"></b>`);
+  }
+  // Barre d'état de l'iPhone aux couleurs de la fête
+  document.querySelector('meta[name="theme-color"]').content = cle ? getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() : "#0e5a3c";
+}
 
 // ── État ─────────────────────────────────────────────────────
 let stations = null;     // [{id, nom, marque, adresse, ville, region, lat, lon, prix:{Régulier:166.4,...}}]
@@ -797,7 +944,7 @@ async function afficher(){
       ? `Aller à la moins chère (${fmtPrix(moinsChere.p)} ¢, ${fmtTrajet(moinsChere)}) ne vaut pas le détour pour ${L_} L.`
       : (R.mode === "route" ? "La moins chère sur ton trajet, et sans détour." : `C'est la plus proche et la moins chère à moins de ${R.rayon} km.`);
   } else {
-    pourquoi = `Tu sauves environ <strong>${fmtArgent(meilleure.eco)}</strong> sur ${L_} L par rapport à « ${a.nomRef.toLowerCase()} », détour compris.`;
+    pourquoi = `Tu sauves environ <strong class="economie">${fmtArgent(meilleure.eco)}</strong> sur ${L_} L par rapport à « ${a.nomRef.toLowerCase()} », détour compris.`;
   }
   const puces = [];
   const bp = bonPrix(meilleure); if (bp) puces.push(bp);
@@ -961,7 +1108,7 @@ $("#dlg-rabais").addEventListener("close", () => {
 
 function ouvrirReglages(){
   $("#r-app").value = R.app; $("#r-reservoir").value = R.reservoir; $("#r-conso").value = R.conso;
-  $("#r-ville").value = R.ville; $("#r-costco").checked = !!R.sansCostco;
+  $("#r-ville").value = R.ville; $("#r-costco").checked = !!R.sansCostco; $("#r-fete").value = R.fete || "auto";
   $("#dlg-reglages").showModal();
 }
 $("#dlg-reglages").addEventListener("close", () => {
@@ -971,6 +1118,7 @@ $("#dlg-reglages").addEventListener("close", () => {
   R.reservoir = num("#r-reservoir", 10, 400, DEFAUTS.reservoir);
   R.conso     = num("#r-conso", 2, 40, DEFAUTS.conso);
   R.sansCostco = $("#r-costco").checked;
+  R.fete = $("#r-fete").value; appliquerFete();
   const villeAvant = R.ville;
   R.ville = $("#r-ville").value.trim();
   sauverReglages();
@@ -1013,6 +1161,7 @@ document.addEventListener("visibilitychange", () => {
 });
 setInterval(majStatut, 30000);
 
+appliquerFete();
 marquerBoutons();
 rafraichir(true);
 </script>

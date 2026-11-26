@@ -40,6 +40,10 @@ on ne l'utilise pas (son API interne exige un jeton).
 - **Il me reste** Vide/¼/½/¾ × capacité réservoir (défaut 60 L) = litres à mettre. Consommation défaut 9 L/100 km.
 - **Y aller** : app préférée (défaut **Waze** `https://waze.com/ul?ll=LAT%2CLON&navigate=yes`), + Apple Plans, Google.
 - Exclure Costco (membres), position manuelle (ville) si GPS refusé.
+- **Thèmes festifs** (demande de JF : « design festif qui change ») : choisis selon la date (`FETES` dans le script,
+  couleurs dans le CSS `:root[data-fete=…]`). Noël 20 nov.–6 janv. (neige, guirlande, chapeau de neige,
+  rabais en canne de bonbon, 🎁 sur les économies), Saint-Valentin, Saint-Patrick, Fête nationale, Halloween.
+  Réglages → « Thème festif » : automatique, une fête précise ou sobre. Rien d'animé si « Réduire les animations ».
 - Réglages dans `localStorage` (clé `pleinfute`).
 
 ## Décisions de JF
