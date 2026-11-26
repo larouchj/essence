@@ -34,6 +34,8 @@ on ne l'utilise pas (son API interne exige un jeton).
   « Autour de moi » : réf. = la plus proche, km en plus × 2 (aller-retour).
 - **Mes rabais** (¢/L par bannière) : défaut RBC 3 ¢ Petro-Canada, CIBC 3 ¢ Ultramar (Journie ; pas de
   Pioneer/Chevron au Québec dans le fichier). Le plus gros rabais applicable compte. Tout en prix net.
+  **Barre bien en vue sur l'écran principal** (pas dans Réglages, choix de JF) : toucher une puce active/désactive
+  le rabais (champ `off`), « Modifier » ouvre son propre dialogue.
 - **Bon prix ?** : prix net vs prix affiché moyen de la région (calculé sur le fichier).
 - **Il me reste** Vide/¼/½/¾ × capacité réservoir (défaut 60 L) = litres à mettre. Consommation défaut 9 L/100 km.
 - **Y aller** : app préférée (défaut **Waze** `https://waze.com/ul?ll=LAT%2CLON&navigate=yes`), + Apple Plans, Google.
