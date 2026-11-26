@@ -9,10 +9,19 @@ Fichier public de la Régie de l'énergie du Québec : `https://regieessencequeb
 (≈ 2 500 stations, regénéré aux 5 minutes, accessible directement depuis un navigateur).
 Aucun serveur à nous : la page télécharge le fichier et fait tous les calculs dans le téléphone.
 
+## Distances réelles en auto
+Calculées par le serveur public OSRM (`router.project-osrm.org`, données OpenStreetMap, sans clé) :
+distance et temps de route vers jusqu'à 99 stations en une requête. Le trajet vers le meilleur choix
+est tracé sur la carte. Si OSRM ne répond pas : vol d'oiseau × 1,3, affiché avec « ≈ ».
+
 ## Calcul du « meilleur choix »
 économie nette = (prix de la plus proche − prix de la station) × litres
-               − (distance en plus × 2 × facteur route × L/100 km × prix)
-Distances à vol d'oiseau × facteur route (1,3 par défaut). Réglages gardés dans le téléphone.
+               − (km de route en plus × 2 (aller-retour) × L/100 km × prix)
+Réglages (app de navigation, litres, consommation, Costco) gardés dans le téléphone.
+
+## Navigation
+Bouton « Y aller » : Waze (par défaut, `waze.com/ul?ll=…&navigate=yes`), Apple Plans ou Google Maps.
+Carte : Leaflet + tuiles OpenStreetMap.
 
 ## Fichiers
 - `index.html` — toute l'app (HTML + CSS + JavaScript commenté en français)
