@@ -13,7 +13,7 @@ ajouté à l'écran d'accueil. Région de JF : Estrie (Sherbrooke, Magog…).
 - `index.html` : toute l'app (HTML + CSS + JS). `manifest.json` + `icone-*.png` : installation sur iPhone.
 - `outils/icones.py` : regénère les icônes (Pillow).
 - Hébergement prévu : **GitHub Pages** (dépôt public `larouchj/essence`, branche `main`, dossier racine).
-  Le GPS exige https. Pas encore en ligne au 2026-11-26.
+  Le GPS exige https. **En ligne depuis le 2026-11-26 : https://larouchj.github.io/essence/** (un push sur `main` met le site à jour en ~1 min).
 - Test local : `python3 -m http.server 8000` → http://localhost:8000 (localhost accepté pour le GPS).
 
 ## Sources de données (toutes publiques, sans clé, CORS ouvert)
@@ -54,5 +54,5 @@ on ne l'utilise pas (son API interne exige un jeton).
 - Serveur pour : alertes de baisse, historique, bouton « prix différent à la pompe », carnet de pleins.
 
 ## Prochaines étapes
-1. Créer le dépôt GitHub public `essence`, pousser, activer Pages (`main` / root).
+1. ~~Créer le dépôt GitHub, activer Pages~~ (fait le 2026-11-26).
 2. Tester sur l'iPhone de JF (GPS, Waze, écran d'accueil).
