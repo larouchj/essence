@@ -39,6 +39,13 @@ on ne l'utilise pas (son API interne exige un jeton).
 - **Bon prix ?** : prix net vs prix affiché moyen de la région (calculé sur le fichier).
 - **Il me reste** Vide/¼/½/¾ × capacité réservoir (défaut 60 L) = litres à mettre. Consommation défaut 9 L/100 km.
 - **Y aller** : app préférée (défaut **Waze** `https://waze.com/ul?ll=LAT%2CLON&navigate=yes`), + Apple Plans, Google.
+- **Devant moi** (choix de JF, 2026-11-26 : taper/coller une destination « pas pratique ») : aucune destination.
+  `watchPosition` → cap (coords.heading si > 7 km/h, sinon relèvement entre 2 positions à > 30 m ; valide 3 min).
+  Stations dans un cône ±35° (±60° à < 2 km) jusqu'au rayon ; détour ≈ (km route − km en avant) + km de côté ;
+  réf. = la moins détournée. Recalcul après 500 m ou 25° (max aux 15 s). Pas de cap → « Autour de moi » + bandeau.
+  **Carte direction vers le haut comme Waze** : plugin `leaflet-rotate@0.2.8` (jsdelivr), `setBearing(360 − cap)`
+  (il tourne dans l'autre sens !), `setView` avant le 1er `setBearing`, cadrage maison (moi en bas) car `fitBounds`
+  gère mal la rotation ; flèche bleue + cône pâle.
 - **Destination sans taper** (JF est d'habitude déjà dans Waze ; Waze n'a pas d'API pour lire le trajet en cours) :
   bouton « Coller ma destination de Waze » (lit le presse-papier ; Waze → destination → Partager → Copier),
   coller un lien waze.com dans la case part tout seul, ★ favoris + récentes en puces. `lireLienWaze` comprend

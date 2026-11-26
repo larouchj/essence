@@ -20,6 +20,8 @@
 <!-- Leaflet : la petite carte -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<!-- leaflet-rotate : permet de tourner la carte (direction vers le haut, comme Waze) -->
+<script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"></script>
 <style>
 /* Mise en page : une colonne étroite — contrôles, carte, recommandation, liste. */
 :root{
@@ -60,7 +62,11 @@ h1{font:700 1.6rem/1 var(--display);letter-spacing:.01em;margin:0}
 .seg{display:flex;background:var(--chip);border-radius:12px;padding:3px;gap:3px}
 .seg button{flex:1;border:0;background:transparent;border-radius:9px;padding:9px 4px;font-weight:600;font-size:.95rem;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--sel);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
-.seg.mode button{padding:10px 4px;font-size:1rem}
+.seg.mode button{padding:10px 2px;font-size:.95rem}
+/* « Devant moi » : flèche de direction (pointe toujours vers le haut : la carte tourne) et cône de recherche */
+.fleche{width:26px;height:26px;transform:translate(-50%,-50%);filter:drop-shadow(0 1px 3px rgba(0,0,0,.45))}
+.fleche svg{width:100%;height:100%}
+.bandeau{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:9px 12px;font-size:.88rem;margin-bottom:10px}
 .rangee{display:flex;align-items:center;gap:10px}
 .rangee .etiq{font-size:.8rem;font-weight:600;color:var(--muted);white-space:nowrap}
 .rangee .seg{flex:1}
@@ -280,6 +286,7 @@ h1{white-space:nowrap}
   <div class="controles">
     <div class="seg mode" id="seg-mode" role="group" aria-label="Où chercher">
       <button data-v="autour">Autour de moi</button>
+      <button data-v="devant">Devant moi</button>
       <button data-v="route">Sur ma route</button>
     </div>
     <div class="seg" id="seg-carburant" role="group" aria-label="Carburant">
@@ -662,6 +669,39 @@ function trouverPosition(){
   });
 }
 
+// ── Suivi GPS en continu (mode « Devant moi ») ───────────────
+// On écoute le GPS tant que le mode est actif, pour connaître la direction (le « cap ») :
+// 1) l'iPhone donne lui-même le cap quand on roule (coords.heading) ;
+// 2) sinon on le calcule entre deux positions à plus de 30 m l'une de l'autre.
+const CAP_VALIDE_MS = 3 * 60 * 1000;   // le cap reste bon 3 min (arrêt à un feu, etc.)
+let suivi = null, cap = null, posPrecedente = null, dernierDevant = null;
+const rad = d => d * Math.PI / 180;
+function relevement(a, b){   // direction de a vers b, en degrés (0 = nord, 90 = est)
+  const y = Math.sin(rad(b.lon - a.lon)) * Math.cos(rad(b.lat));
+  const x = Math.cos(rad(a.lat)) * Math.sin(rad(b.lat)) - Math.sin(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.cos(rad(b.lon - a.lon));
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+const ecartAngle = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+const capValide = () => cap && Date.now() - cap.t < CAP_VALIDE_MS;
+function demarrerSuivi(){
+  if (suivi !== null || R.ville || !("geolocation" in navigator)) return;
+  suivi = navigator.geolocation.watchPosition(p => surPosition(p.coords), () => {}, { enableHighAccuracy: true, maximumAge: 2000 });
+}
+function arreterSuivi(){ if (suivi !== null){ navigator.geolocation.clearWatch(suivi); suivi = null; } }
+function surPosition(c){
+  const p = { lat: c.latitude, lon: c.longitude, precision: c.accuracy || 20, source: "gps" };
+  if (c.heading != null && !isNaN(c.heading) && c.speed > 2) cap = { deg: c.heading, t: Date.now() };   // > 7 km/h
+  else if (posPrecedente && volOiseauKm(posPrecedente, p) > 0.03) cap = { deg: relevement(posPrecedente, p), t: Date.now() };
+  if (!posPrecedente || volOiseauKm(posPrecedente, p) > 0.03) posPrecedente = p;
+  position = p; erreurGps = null;
+  if (R.mode !== "devant" || !stations || enCours) return;
+  // On recalcule si on a fait 500 m, tourné de 25° ou obtenu un premier cap (au plus aux 15 s)
+  const d = dernierDevant, maintenant = Date.now();
+  const aRefaire = !d || (!d.cap && capValide())
+    || (maintenant - d.t > 15000 && (volOiseauKm(d.pos, p) > 0.5 || (capValide() && d.cap && ecartAngle(d.cap, cap.deg) > 25)));
+  if (aRefaire) afficher();
+}
+
 // ── Recherche d'une destination ──────────────────────────────
 // 1) une destination récente ; 2) une ville où il y a des stations ; 3) Nominatim (adresse)
 async function chercherDestination(q){
@@ -906,6 +946,37 @@ async function analyserAutour(){
   return bilan(ref, dansRayon, "La plus proche");
 }
 
+// ── Analyse « Devant moi » ───────────────────────────────────
+// Stations dans un cône de ±35° devant (±60° tout près), jusqu'au rayon choisi.
+// Détour estimé = (km de route jusqu'à la station − ce qu'on aurait roulé de toute façon dans cette direction)
+//               + l'écart de côté pour revenir sur notre chemin.
+const CONE_DEG = 35;
+async function analyserDevant(){
+  if (!capValide()){ const a = await analyserAutour(); if (a) a.sansCap = true; return a; }
+  dernierDevant = { pos: position, cap: cap.deg, t: Date.now() };
+  let liste = stations.filter(stationOk).map(s => {
+    const vo = volOiseauKm(position, s);
+    return { s, vo, angle: ecartAngle(relevement(position, s), cap.deg) };
+  }).filter(x => x.vo > 0.05 && x.vo <= R.rayon && (x.angle <= CONE_DEG || (x.vo < 2 && x.angle <= 60)));
+  if (!liste.length){ const a = await analyserAutour(); if (a) a.rienDevant = true; return a; }
+  if (liste.length > MAX_ROUTES){   // OSRM : 100 points max → les plus proches + les moins chères
+    const net = x => x.s.prix[R.carburant] - ((rabaisPour(x.s) || {}).c || 0);
+    const parDist = liste.slice().sort((a, b) => a.vo - b.vo), parPrix = liste.slice().sort((a, b) => net(a) - net(b));
+    liste = [...new Set([...parDist.slice(0, 50), ...parPrix.slice(0, 49)])];
+  }
+  await calculerRoutes(liste);
+  const toutes = liste.map(x => {
+    const r = routes.get(x.s.id); if (!r || !isFinite(r.km)) return null;
+    const enAvant = x.vo * Math.cos(rad(x.angle)), deCote = x.vo * Math.sin(rad(x.angle));
+    return avecPrix(x.s, Object.assign({}, r, { detourKm: Math.max(0, r.km - enAvant) + deCote, detourMin: null }));
+  }).filter(Boolean);
+  if (!toutes.length){ const a = await analyserAutour(); if (a) a.rienDevant = true; return a; }
+  const ref = toutes.reduce((m, s) => s.detourKm < m.detourKm ? s : m);   // la moins détournée
+  for (const s of toutes) s.eco = economie(s, ref, s.detourKm - ref.detourKm);
+  ref.eco = 0;
+  return bilan(ref, toutes, "Sans détour");
+}
+
 // ── Analyse « Sur ma route » ─────────────────────────────────
 // 1) on demande le trajet à OSRM ; 2) on garde les stations à moins de 2 km du tracé ;
 // 3) pour chacune : détour = (moi → station → destination) − (moi → destination).
@@ -981,7 +1052,8 @@ const sombre = () => document.documentElement.dataset.theme === "dark" ||
 function initCarte(){
   if (carte || !window.L) return;
   $("#carte").hidden = false;
-  carte = L.map("carte", { zoomControl: false });
+  // rotate : la carte peut tourner (« Devant moi » : direction vers le haut). Pas de rotation à deux doigts.
+  carte = L.map("carte", { zoomControl: false, rotate: true, touchRotate: false, rotateControl: false, bearing: 0, zoomSnap: 0.25 });
   L.control.zoom({ position: "bottomright" }).addTo(carte);
   carte.attributionControl.setPrefix(false);
   fond = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(carte);
@@ -1002,7 +1074,22 @@ function dessinerCarte(a){
   if (!carte) return;
   $("#carte").hidden = false;
   coucheStations.clearLayers(); coucheMoi.clearLayers();
-  L.marker([position.lat, position.lon], { icon: L.divIcon({ className: "", html: '<div class="moi"></div>', iconSize: [16,16], iconAnchor: [8,8] }), interactive: false, zIndexOffset: 1000 }).addTo(coucheMoi);
+  // « Devant moi » : carte tournée pour que la direction soit vers le haut, comme dans Waze
+  if (!carte._loaded) carte.setView([position.lat, position.lon], 13);   // la carte doit avoir une vue avant de tourner
+  if (carte.setBearing) carte.setBearing(a.devant ? (360 - cap.deg) % 360 : 0);   // leaflet-rotate tourne dans l'autre sens
+  const moiHtml = a.devant
+    ? `<div class="fleche"><svg viewBox="0 0 24 24"><path d="M12 2 L20 21 L12 16.5 L4 21 Z" fill="#1a73e8" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></div>`
+    : '<div class="moi"></div>';
+  L.marker([position.lat, position.lon], { icon: L.divIcon({ className: "", html: moiHtml, iconSize: [16,16], iconAnchor: [8,8] }), interactive: false, zIndexOffset: 1000 }).addTo(coucheMoi);
+  if (a.devant){
+    // Cône de recherche, très pâle : où l'app regarde
+    const pt = (km, deg) => {
+      const dLat = km / 110.57 * Math.cos(rad(deg)), dLon = km / (111.32 * Math.cos(rad(position.lat))) * Math.sin(rad(deg));
+      return [position.lat + dLat, position.lon + dLon];
+    };
+    const arc = []; for (let d = -CONE_DEG; d <= CONE_DEG; d += 5) arc.push(pt(R.rayon, cap.deg + d));
+    L.polygon([[position.lat, position.lon], ...arc], { color: "#1a73e8", weight: 1, opacity: .35, fillOpacity: .06, interactive: false }).addTo(coucheMoi);
+  }
   if (position.source === "gps" && position.precision > 50)
     L.circle([position.lat, position.lon], { radius: position.precision, color: "#1a73e8", weight: 1, fillOpacity: .08, interactive: false }).addTo(coucheMoi);
 
@@ -1027,6 +1114,15 @@ function dessinerCarte(a){
     L.polyline(trajet.ligne, { color: couleur, weight: 5, opacity: .8, interactive: false }).addTo(coucheTrajet);
     L.marker([R.destination.lat, R.destination.lon], { icon: L.divIcon({ className: "", html: '<div class="drapeau"></div>', iconSize: [0,0] }), interactive: false }).addTo(coucheMoi);
     carte.fitBounds(L.latLngBounds(trajet.ligne), { padding: [24, 24] });
+  } else if (a.devant){
+    // Cadrage « comme Waze » : moi en bas, la station la plus loin à montrer près du haut
+    const loin = Math.max(1, ...[a.meilleure, a.ref, a.moinsChere].filter(Boolean).map(s => volOiseauKm(position, s)));
+    const h = carte.getSize().y;
+    const mParPixel = loin * 1000 * 1.45 / (h * 0.8);
+    const zoom = Math.max(8, Math.min(16, Math.floor(Math.log2(156543.03 * Math.cos(rad(position.lat)) / mParPixel) * 4) / 4));
+    const km = loin * 0.4, dLat = km / 110.57 * Math.cos(rad(cap.deg)), dLon = km / (111.32 * Math.cos(rad(position.lat))) * Math.sin(rad(cap.deg));
+    carte.setView([position.lat + dLat, position.lon + dLon], zoom, { animate: false });
+    dessinerTrajet(a.meilleure, couleur);
   } else {
     const pts = [[position.lat, position.lon], [a.meilleure.lat, a.meilleure.lon], [a.ref.lat, a.ref.lon]];
     if (a.moinsChere) pts.push([a.moinsChere.lat, a.moinsChere.lon]);
@@ -1090,7 +1186,7 @@ async function afficher(){
   if (!zone.querySelector(".charge")) zone.insertAdjacentHTML("afterbegin", `<div class="charge"><i></i></div>`);
   let a;
   try {
-    a = R.mode === "route" ? await analyserRoute() : await analyserAutour();
+    a = R.mode === "route" ? await analyserRoute() : R.mode === "devant" ? await analyserDevant() : await analyserAutour();
   } catch(e){
     if (no !== dernierCalcul) return;
     zone.innerHTML = `<div class="msg erreur"><p><strong>Calcul du trajet impossible.</strong></p><p>${esc(e.message)}</p>
@@ -1106,13 +1202,23 @@ async function afficher(){
   }
   const { ref, moinsChere, meilleure, choix } = a;
   const L_ = litresAMettre();
+  // « Devant moi » sans direction connue → on montre « Autour de moi » avec un bandeau
+  const devant = R.mode === "devant" && !a.sansCap && !a.rienDevant;
+  const route = R.mode === "route";
+  let bandeau = "";
+  if (a.sansCap) bandeau = R.ville
+    ? `🧭 Avec une position manuelle (${esc(R.ville)}), je ne connais pas ta direction. En attendant : autour de toi.`
+    : `🧭 Je ne connais pas encore ta direction : roule quelques secondes. En attendant : autour de toi.`;
+  if (a.rienDevant) bandeau = `🧭 Aucune station devant toi à moins de ${R.rayon} km. Voici autour de toi.`;
 
   let pourquoi;
   if (a.horsRayon) pourquoi = `Aucune station à moins de ${R.rayon} km en auto : voici la plus proche.`;
   else if (meilleure === ref){
     pourquoi = moinsChere && moinsChere !== ref
       ? `Aller à la moins chère (${fmtPrix(moinsChere.p)} ¢, ${fmtTrajet(moinsChere)}) ne vaut pas le détour pour ${L_} L.`
-      : (R.mode === "route" ? "La moins chère sur ton trajet, et sans détour." : `C'est la plus proche et la moins chère à moins de ${R.rayon} km.`);
+      : (route ? "La moins chère sur ton trajet, et sans détour."
+        : devant ? `La moins chère devant toi à moins de ${R.rayon} km, sans détour.`
+        : `C'est la plus proche et la moins chère à moins de ${R.rayon} km.`);
   } else {
     pourquoi = `Tu sauves environ <strong class="economie">${fmtArgent(meilleure.eco)}</strong> sur ${L_} L par rapport à « ${a.nomRef.toLowerCase()} », détour compris.`;
   }
@@ -1121,8 +1227,8 @@ async function afficher(){
   if (meilleure.rabais) puces.push(`−${meilleure.rabais.c} ¢ avec ${esc(meilleure.rabais.nom)}`);
   puces.push(`${L_} L ≈ ${fmtArgent(L_ * meilleure.p / 100)}`);
 
-  const eyebrow = meilleure === ref ? (R.mode === "route" ? "Va ici · sans détour" : "Va ici · la plus proche") : "Va ici · meilleur choix";
-  let html = `
+  const eyebrow = meilleure === ref ? (route ? "Va ici · sans détour" : devant ? "Va ici · droit devant" : "Va ici · la plus proche") : "Va ici · meilleur choix";
+  let html = (bandeau ? `<div class="bandeau">${bandeau}</div>` : "") + `
   <section class="reco" aria-label="Recommandation">
     <div class="eyebrow">${eyebrow}</div>
     <div class="ligne">
@@ -1138,15 +1244,16 @@ async function afficher(){
   </section>
   <div class="duo">
     ${carteMini(a.nomRef, ref)}
-    ${moinsChere ? carteMini(R.mode === "route" ? "Moins chère · trajet" : "Moins chère · " + R.rayon + " km", moinsChere)
+    ${moinsChere ? carteMini(route ? "Moins chère · trajet" : devant ? "Moins chère · devant" : "Moins chère · " + R.rayon + " km", moinsChere)
       : `<div class="mini"><div class="eyebrow">Moins chère</div><div class="dist">Rien à moins de ${R.rayon} km</div></div>`}
   </div>`;
 
   const liste = (choix.length ? choix : [ref]).slice().sort((x, y) => y.eco - x.eco || x.km - y.km).slice(0, TAILLE_LISTE);
-  const titre = R.mode === "route" ? "Sur ton trajet" : `À moins de ${R.rayon} km`;
+  const titre = route ? "Sur ton trajet" : devant ? `Devant toi · ${R.rayon} km` : `À moins de ${R.rayon} km`;
   html += `<h2>${titre} <span>${choix.length} station${choix.length > 1 ? "s" : ""} · par économie</span></h2>
   <ol class="liste">${liste.map(ligne).join("") || `<li class="vide">Aucune station.</li>`}</ol>`;
   zone.innerHTML = html;
+  a.devant = devant;
   dessinerCarte(a);
   majStatut();
 }
@@ -1308,7 +1415,7 @@ function segment(id, applique){
     applique(b.dataset.v); sauverReglages(); afficher();
   });
 }
-segment("#seg-mode", v => { R.mode = v; });
+segment("#seg-mode", v => { R.mode = v; if (v === "devant") demarrerSuivi(); else arreterSuivi(); });
 segment("#seg-carburant", v => { R.carburant = v; });
 segment("#seg-rayon", v => { R.rayon = +v; });
 segment("#seg-niveau", v => { R.niveau = +v; });
@@ -1335,6 +1442,7 @@ setInterval(majStatut, 30000);
 appliquerFete();
 marquerBoutons();
 rafraichir(true);
+if (R.mode === "devant") demarrerSuivi();
 </script>
 </body>
 </html>
