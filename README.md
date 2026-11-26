@@ -19,6 +19,13 @@ est tracé sur la carte. Si OSRM ne répond pas : vol d'oiseau × 1,3, affiché 
                − (km de route en plus × 2 (aller-retour) × L/100 km × prix)
 Réglages (app de navigation, litres, consommation, Costco) gardés dans le téléphone.
 
+## Fonctions
+- **Autour de moi** (rayon 2–50 km en auto) ou **Sur ma route** (destination : ville, récente ou adresse via Nominatim ;
+  stations à moins de 2 km du tracé ; détour = moi→station→destination − moi→destination).
+- **Mes rabais** : ¢/L par bannière (défaut : RBC 3 ¢ Petro-Canada, CIBC 3 ¢ Ultramar) ; tout est comparé en prix net.
+- **Bon prix ?** : écart entre ton prix net et le prix affiché moyen de la région (calculé sur le fichier de la Régie).
+- **Il me reste** Vide/¼/½/¾ × capacité du réservoir = litres à mettre (sert à l'économie et au coût du plein).
+
 ## Navigation
 Bouton « Y aller » : Waze (par défaut, `waze.com/ul?ll=…&navigate=yes`), Apple Plans ou Google Maps.
 Carte : Leaflet + tuiles OpenStreetMap.

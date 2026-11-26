@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Plein futé</title>
-<meta name="description" content="Station d'essence la plus proche et la moins chère autour de toi, distances réelles en auto, prix de la Régie de l'énergie du Québec.">
+<meta name="description" content="Station d'essence la plus avantageuse autour de toi ou sur ta route : distances réelles en auto, tes rabais de cartes, prix de la Régie de l'énergie du Québec.">
 <meta name="theme-color" content="#0e5a3c">
 <!-- Pour l'écran d'accueil de l'iPhone : s'ouvre comme une app, sans barre Safari -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -25,8 +25,7 @@
 :root{
   --bg:#f3f5f1; --surface:#ffffff; --fg:#17201b; --muted:#5d6a62; --line:#dde3dc;
   --accent:#0e5a3c; --accent-fg:#ffffff; --moi:#1a73e8;
-  --good:#167a43; --bad:#b3261e; --chip:#e9ede7; --sel:#ffffff;
-  --waze:#33ccff; --waze-fg:#0b2733;
+  --good:#167a43; --bad:#b3261e; --chip:#e9ede7; --sel:#ffffff; --rabais:#7a4f00; --rabais-bg:#fff1cc;
   --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:light;
@@ -34,13 +33,14 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0f1512; --surface:#18211c; --fg:#e8eee9; --muted:#9aa89f; --line:#2a352f;
   --accent:#4fc58b; --accent-fg:#06281a; --moi:#6ea8ff;
-  --good:#5fd394; --bad:#ff8a80; --chip:#222d27; --sel:#3a4a41; color-scheme:dark}}
+  --good:#5fd394; --bad:#ff8a80; --chip:#222d27; --sel:#3a4a41; --rabais:#ffd27a; --rabais-bg:#3a2f14; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0f1512; --surface:#18211c; --fg:#e8eee9; --muted:#9aa89f; --line:#2a352f;
   --accent:#4fc58b; --accent-fg:#06281a; --moi:#6ea8ff;
-  --good:#5fd394; --bad:#ff8a80; --chip:#222d27; --sel:#3a4a41; color-scheme:dark}
+  --good:#5fd394; --bad:#ff8a80; --chip:#222d27; --sel:#3a4a41; --rabais:#ffd27a; --rabais-bg:#3a2f14; color-scheme:dark}
 
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0}
 body{background:var(--bg);color:var(--fg);font:16px/1.4 var(--body);
   padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));
@@ -55,11 +55,24 @@ h1{font:700 1.6rem/1 var(--display);letter-spacing:.01em;margin:0}
 .icone-btn{background:var(--chip);border:0;border-radius:10px;width:40px;height:40px;display:grid;place-items:center;flex:none}
 .icone-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
 
-/* Contrôles : carburant + rayon */
+/* Contrôles */
 .controles{display:grid;gap:8px;margin-block:6px 12px}
 .seg{display:flex;background:var(--chip);border-radius:12px;padding:3px;gap:3px}
 .seg button{flex:1;border:0;background:transparent;border-radius:9px;padding:9px 4px;font-weight:600;font-size:.95rem;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--sel);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg.mode button{padding:10px 4px;font-size:1rem}
+.rangee{display:flex;align-items:center;gap:10px}
+.rangee .etiq{font-size:.8rem;font-weight:600;color:var(--muted);white-space:nowrap}
+.rangee .seg{flex:1}
+.rangee .seg button{padding:7px 2px;font-size:.9rem}
+.dest{display:flex;gap:8px}
+.dest input{flex:1;min-width:0;font:inherit;font-size:1rem;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.dest button{border:0;border-radius:12px;padding:0 16px;font-weight:600;background:var(--accent);color:var(--accent-fg)}
+.dest-choisie{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 8px 8px 12px}
+.dest-choisie .t{flex:1;min-width:0}
+.dest-choisie .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dest-choisie .s{font-size:.8rem;color:var(--muted)}
+.dest-choisie button{border:0;background:var(--chip);border-radius:9px;width:34px;height:34px;flex:none}
 
 /* Carte */
 #carte{height:250px;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:var(--chip);margin-bottom:12px;z-index:0}
@@ -69,9 +82,10 @@ h1{font:700 1.6rem/1 var(--display);letter-spacing:.01em;margin:0}
 .pin{display:inline-block;transform:translate(-50%,-100%);background:var(--surface);color:var(--fg);border:1.5px solid var(--line);
   border-radius:8px;padding:1px 6px;font:700 .85rem/1.3 var(--display);white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.25);position:relative}
 .pin::after{content:"";position:absolute;left:50%;bottom:-6px;margin-left:-5px;border:5px solid transparent;border-top-color:var(--line);border-bottom:0}
-.pin.top{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-size:1rem;z-index:5}
+.pin.top{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-size:1rem}
 .pin.top::after{border-top-color:var(--accent)}
 .moi{width:16px;height:16px;border-radius:50%;background:var(--moi);border:3px solid #fff;box-shadow:0 0 0 6px rgba(26,115,232,.25)}
+.drapeau{width:14px;height:14px;border-radius:3px;background:var(--fg);border:3px solid var(--surface);transform:translate(-50%,-50%) rotate(45deg)}
 .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--surface);color:var(--fg)}
 .leaflet-popup-content{margin:12px;min-width:200px}
 .pop .t{font-weight:600}.pop .s{font-size:.82rem;color:var(--muted);margin-bottom:8px}
@@ -83,22 +97,25 @@ h1{font:700 1.6rem/1 var(--display);letter-spacing:.01em;margin:0}
 .reco .ligne{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
 .reco .nom{font-weight:600;font-size:1.15rem;line-height:1.2;min-width:0}
 .reco .adr{font-size:.88rem;opacity:.85;min-width:0}
-.prix{font:700 2.6rem/0.9 var(--display);font-variant-numeric:tabular-nums;white-space:nowrap}
+.prix{font:700 2.6rem/0.9 var(--display);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
 .prix small{font-size:.45em;font-weight:600;margin-left:1px}
+.prix .brut{display:block;font:600 .8rem/1.2 var(--body);opacity:.85;text-decoration:line-through;margin-bottom:2px}
 .reco .pourquoi{font-size:.9rem;opacity:.95}
+.puces{display:flex;flex-wrap:wrap;gap:6px}
+.puce{font-size:.78rem;font-weight:600;border-radius:999px;padding:3px 9px;background:rgba(255,255,255,.18)}
+:root[data-theme="dark"] .reco .puce{background:rgba(0,0,0,.14)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .reco .puce{background:rgba(0,0,0,.14)}}
 .btns{display:flex;gap:8px}
 .btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:12px;padding:12px 8px;font-weight:600;text-decoration:none;font-size:.95rem;border:0;text-align:center}
-.btn.waze{background:var(--waze);color:var(--waze-fg)}
-.btn.plans{background:var(--surface);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line)}
-.btn.google{background:var(--surface);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line)}
+.btn.waze,.btn.plans,.btn.google{background:var(--surface);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line)}
 .reco .btn.principal{background:var(--accent-fg);color:var(--accent);flex:2;font-size:1.05rem}
 .reco .btn.autre{background:transparent;color:var(--accent-fg);box-shadow:inset 0 0 0 1.5px currentColor;flex:1}
 
 /* Deux petites cartes */
 .duo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-.mini{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:4px;text-align:left;min-width:0;text-decoration:none;color:inherit}
+.mini{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:4px;align-content:start;text-align:left;min-width:0;text-decoration:none;color:inherit}
 .mini .eyebrow{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
-.mini .prix{font-size:2rem}
+.mini .prix{font-size:2rem;text-align:left}
 .mini .nom{font-weight:600;font-size:.92rem;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mini .dist{font-size:.82rem;color:var(--muted)}
 
@@ -117,6 +134,7 @@ ol.liste{list-style:none;margin:0;padding:0;background:var(--surface);border:1px
 .item .p{font:700 1.45rem/1 var(--display);font-variant-numeric:tabular-nums}
 .item .eco{font-size:.75rem;font-weight:600;font-variant-numeric:tabular-nums}
 .eco.plus{color:var(--good)} .eco.moins{color:var(--muted)}
+.tag-rabais{display:inline-block;font-size:.7rem;font-weight:700;color:var(--rabais);background:var(--rabais-bg);border-radius:6px;padding:0 5px;margin-left:4px;vertical-align:1px}
 .vide{padding:16px;color:var(--muted);text-align:center}
 
 /* Messages et réglages */
@@ -125,14 +143,19 @@ ol.liste{list-style:none;margin:0;padding:0;background:var(--surface);border:1px
 .msg p{margin:0}
 .btn.plein{background:var(--accent);color:var(--accent-fg)}
 .btn.gris{background:var(--chip)}
-dialog{border:0;border-radius:18px;padding:0;background:var(--surface);color:var(--fg);width:min(92vw,440px);max-height:88vh}
+dialog{border:0;border-radius:18px;padding:0;background:var(--surface);color:var(--fg);width:min(94vw,460px);max-height:90vh}
 dialog::backdrop{background:rgba(0,0,0,.45)}
 .dlg{padding:18px;display:grid;gap:14px}
 .dlg h3{font:700 1.3rem var(--display);margin:0}
+.dlg h4{font:700 1.05rem var(--display);margin:6px 0 -6px;letter-spacing:.02em}
 .champ{display:grid;gap:4px}
 .champ label{font-weight:600;font-size:.9rem}
 .champ .aide{font-size:.8rem;color:var(--muted)}
-.champ input,.champ select{font:inherit;font-size:1rem;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%}
+.dlg input,.dlg select{font:inherit;font-size:1rem;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%;min-width:0}
+.rabais-ligne{display:grid;grid-template-columns:1fr 1.3fr 64px 36px;gap:6px;align-items:center}
+.rabais-ligne input,.rabais-ligne select{padding:9px 8px;font-size:.95rem}
+.rabais-ligne button{border:0;background:var(--chip);border-radius:9px;height:38px}
+.ajouter{border:1px dashed var(--line);background:transparent;border-radius:10px;padding:9px;font-weight:600;color:var(--muted)}
 .case{display:flex;gap:10px;align-items:center;font-weight:600;font-size:.9rem}
 .case input{width:22px;height:22px;accent-color:var(--accent)}
 .note{font-size:.78rem;color:var(--muted);line-height:1.45}
@@ -160,6 +183,10 @@ footer{margin-top:18px}
   </header>
 
   <div class="controles">
+    <div class="seg mode" id="seg-mode" role="group" aria-label="Où chercher">
+      <button data-v="autour">Autour de moi</button>
+      <button data-v="route">Sur ma route</button>
+    </div>
     <div class="seg" id="seg-carburant" role="group" aria-label="Carburant">
       <button data-v="Régulier">Régulier</button>
       <button data-v="Super">Super</button>
@@ -171,6 +198,24 @@ footer{margin-top:18px}
       <button data-v="10">10 km</button>
       <button data-v="25">25 km</button>
       <button data-v="50">50 km</button>
+    </div>
+    <form class="dest" id="form-dest" hidden autocomplete="off">
+      <input id="dest-q" list="destinations" placeholder="Destination : ville ou adresse" enterkeyhint="go" aria-label="Destination">
+      <datalist id="destinations"></datalist>
+      <button type="submit">Go</button>
+    </form>
+    <div class="dest-choisie" id="dest-choisie" hidden>
+      <div class="t"><div class="n" id="dest-nom"></div><div class="s" id="dest-info"></div></div>
+      <button type="button" id="dest-effacer" aria-label="Changer de destination">✕</button>
+    </div>
+    <div class="rangee">
+      <span class="etiq">Il me reste</span>
+      <div class="seg" id="seg-niveau" role="group" aria-label="Niveau actuel du réservoir">
+        <button data-v="0">Vide</button>
+        <button data-v="0.25">¼</button>
+        <button data-v="0.5">½</button>
+        <button data-v="0.75">¾</button>
+      </div>
     </div>
   </div>
 
@@ -184,8 +229,9 @@ footer{margin-top:18px}
 
   <footer class="note">
     Prix publiés par la <a href="https://regieessencequebec.ca/" target="_blank" rel="noopener">Régie de l'énergie du Québec</a>
-    (déclarés par les stations, mis à jour aux 5 minutes) ; le prix à la pompe peut différer.
-    Distances et temps en auto : <a href="https://project-osrm.org/" target="_blank" rel="noopener">OSRM</a>,
+    (déclarés par les stations, mis à jour aux 5 minutes) ; le prix à la pompe peut différer. Vérifie les conditions de tes rabais auprès de ta banque.
+    Distances et temps en auto : <a href="https://project-osrm.org/" target="_blank" rel="noopener">OSRM</a> ;
+    adresses : <a href="https://nominatim.org/" target="_blank" rel="noopener">Nominatim</a> ;
     carte © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>.
   </footer>
 </div>
@@ -201,18 +247,25 @@ footer{margin-top:18px}
         <option value="plans">Apple Plans</option>
         <option value="google">Google Maps</option>
       </select>
-      <div class="aide">Le gros bouton « Y aller » ouvre cette app directement.</div>
     </div>
+
+    <h4>Mes rabais</h4>
+    <div class="aide note">Rabais en ¢ par litre selon la bannière (carte de crédit, programme de fidélité). Si plusieurs s'appliquent, le plus gros compte.</div>
+    <div id="r-rabais" style="display:grid;gap:6px"></div>
+    <button type="button" class="ajouter" id="r-rabais-ajouter">+ Ajouter un rabais</button>
+
+    <h4>Mon véhicule</h4>
     <div class="champ">
-      <label for="r-litres">Taille du plein (litres)</label>
-      <input id="r-litres" type="number" inputmode="decimal" min="5" max="400" step="1">
-      <div class="aide">Combien de litres tu mets d'habitude.</div>
+      <label for="r-reservoir">Capacité du réservoir (litres)</label>
+      <input id="r-reservoir" type="number" inputmode="decimal" min="10" max="400" step="1">
     </div>
     <div class="champ">
       <label for="r-conso">Consommation (L/100 km)</label>
       <input id="r-conso" type="number" inputmode="decimal" min="2" max="40" step="0.1">
       <div class="aide">Sert à calculer ce que coûte le détour.</div>
     </div>
+
+    <h4>Autres</h4>
     <label class="case" for="r-costco"><input id="r-costco" type="checkbox"> Exclure Costco (membres seulement)</label>
     <div class="champ">
       <label for="r-ville">Position manuelle (si pas de GPS)</label>
@@ -220,7 +273,7 @@ footer{margin-top:18px}
       <datalist id="villes"></datalist>
       <div class="aide">Laisse vide pour utiliser le GPS.</div>
     </div>
-    <p class="note">Économie nette = (prix de la plus proche − prix de la station) × litres − essence brûlée pour les kilomètres en plus (aller-retour, distance réelle en auto).</p>
+    <p class="note">Économie nette = (prix net de la station de référence − prix net de la station) × litres à mettre − essence brûlée pour les kilomètres en plus (distances réelles en auto).</p>
     <div class="btns">
       <button class="btn gris" value="annuler" type="submit">Annuler</button>
       <button class="btn plein" value="ok" type="submit" id="r-ok">Enregistrer</button>
@@ -231,42 +284,54 @@ footer{margin-top:18px}
 <script>
 "use strict";
 // ─────────────────────────────────────────────────────────────
-//  Plein futé — trouve la station d'essence la plus avantageuse.
+//  Plein futé — trouve la station d'essence la plus avantageuse,
+//  autour de toi ou le long de ta route.
 //  Prix : fichier GeoJSON public de la Régie de l'énergie (aux 5 min).
-//  Distances : vraies distances en auto, calculées par OSRM
-//  (serveur public, données OpenStreetMap).
+//  Distances : vraies distances en auto (OSRM, données OpenStreetMap).
+//  Adresses : Nominatim (OpenStreetMap).
 // ─────────────────────────────────────────────────────────────
 
 const URL_DONNEES = "https://regieessencequebec.ca/stations.geojson.gz";
 const URL_OSRM    = "https://router.project-osrm.org";
+const URL_ADRESSE = "https://nominatim.openstreetmap.org/search";
 const MAX_AGE_MS  = 5 * 60 * 1000;   // on retélécharge les prix s'ils ont plus de 5 min
 const TAILLE_LISTE = 25;             // stations dans la liste
-const MAX_ROUTES  = 99;              // OSRM public : 100 points max par requête (nous + 99 stations)
-const FACTEUR_SECOURS = 1.3;         // si OSRM ne répond pas : vol d'oiseau × 1,3 (marqué « approx. »)
+const MAX_ROUTES  = 99;              // OSRM public : 100 points max par requête
+const FACTEUR_SECOURS = 1.3;         // si OSRM ne répond pas : vol d'oiseau × 1,3 (marqué « ≈ »)
+const TAMPON_ROUTE_KM = 2;           // « sur ma route » : stations à moins de 2 km du trajet
 
 // ── Réglages (gardés dans le téléphone) ──────────────────────
-const DEFAUTS = { carburant: "Régulier", rayon: 10, litres: 50, conso: 9, ville: "", sansCostco: false, app: "waze" };
+const DEFAUTS = {
+  mode: "autour", carburant: "Régulier", rayon: 10, niveau: 0.25, reservoir: 60, conso: 9,
+  ville: "", sansCostco: false, app: "waze", destination: null, recentes: [],
+  rabais: [ { nom: "RBC", marque: "Petro-Canada", c: 3 }, { nom: "CIBC", marque: "Ultramar", c: 3 } ]
+};
 function lireReglages(){
-  try { return Object.assign({}, DEFAUTS, JSON.parse(localStorage.getItem("pleinfute") || "{}")); }
-  catch(e){ return Object.assign({}, DEFAUTS); }
+  try {
+    const r = Object.assign({}, DEFAUTS, JSON.parse(localStorage.getItem("pleinfute") || "{}"));
+    // Ancienne version : « litres » fixe → on garde la valeur par défaut du réservoir
+    delete r.litres; delete r.route;
+    return r;
+  } catch(e){ return JSON.parse(JSON.stringify(DEFAUTS)); }
 }
 function sauverReglages(){ try { localStorage.setItem("pleinfute", JSON.stringify(R)); } catch(e){} }
 const R = lireReglages();
+const litresAMettre = () => Math.max(5, Math.round(R.reservoir * (1 - R.niveau)));
 
 // ── État ─────────────────────────────────────────────────────
-let stations = null;     // [{id, nom, marque, adresse, ville, lat, lon, prix:{Régulier:166.4,...}}]
-let genereLe = null;     // heure de génération du fichier de la Régie
-let chargeLe = 0;        // quand on l'a téléchargé
-let position = null;     // {lat, lon, precision, source}
-let erreurGps = null;
-let routes = new Map();  // id station → {km, min, approx} depuis la position actuelle
-let routesPour = "";     // position pour laquelle « routes » est valide
+let stations = null;     // [{id, nom, marque, adresse, ville, region, lat, lon, prix:{Régulier:166.4,...}}]
+let moyennes = {};       // moyennes[carburant][région] = prix moyen affiché
+let marquesConnues = []; // bannières présentes, de la plus fréquente à la moins fréquente
+let genereLe = null, chargeLe = 0;
+let position = null, erreurGps = null;
+let routes = new Map(), routesPour = "";   // id station → {km, min, approx} depuis la position
 let osrmEnPanne = false;
+let trajet = null;       // « sur ma route » : {cle, km, min, ligne:[[lat,lon]...], stations:[...] }
 
 const $ = s => document.querySelector(s);
 
 // ── Outils ───────────────────────────────────────────────────
-function volOiseauKm(a, b){   // haversine — sert seulement à présélectionner les stations
+function volOiseauKm(a, b){
   const rad = Math.PI / 180;
   const dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
   const h = Math.sin(dLat/2)**2 + Math.cos(a.lat*rad) * Math.cos(b.lat*rad) * Math.sin(dLon/2)**2;
@@ -275,16 +340,24 @@ function volOiseauKm(a, b){   // haversine — sert seulement à présélectionn
 const nf1 = new Intl.NumberFormat("fr-CA", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const nf2 = new Intl.NumberFormat("fr-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtPrix = c => nf1.format(c);
-const fmtKm   = km => km < 1 ? Math.round(km*1000) + " m" : nf1.format(km) + " km";
+const fmtKm   = km => km < 1 ? Math.round(km*1000) + " m" : (km < 100 ? nf1.format(km) : Math.round(km)) + " km";
 const fmtMin  = m => m < 60 ? Math.max(1, Math.round(m)) + " min" : Math.floor(m/60) + " h " + String(Math.round(m%60)).padStart(2, "0");
-const fmtTrajet = s => (s.approx ? "≈ " : "") + fmtKm(s.km) + (s.min != null ? " · " + fmtMin(s.min) : "");
 const fmtArgent = d => nf2.format(Math.abs(d)) + " $";
 function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+// Texte « où est la station » : autour de moi = distance + temps ; sur ma route = détour
+function fmtTrajet(s){
+  if (s.detourKm != null){
+    const det = s.detourMin != null ? "+" + fmtMin(Math.max(0, s.detourMin)) : "+" + fmtKm(Math.max(0, s.detourKm));
+    return `dans ${fmtKm(s.km)} · détour ${det}`;
+  }
+  return (s.approx ? "≈ " : "") + fmtKm(s.km) + (s.min != null ? " · " + fmtMin(s.min) : "");
+}
 
 const MARQUES = {
   "Esso":["#1f3f99","ES"], "Petro-Canada":["#c8102e","PC"], "Shell":["#d9a400","SH"], "Ultramar":["#0063a6","UL"],
   "Harnois":["#0b7a3b","HA"], "Irving":["#004b87","IR"], "Sonic":["#e4572e","SO"], "Couche-Tard":["#d81e05","CT"],
-  "Crevier":["#5a2d82","CR"], "Canadian Tire":["#d6001c","CT"], "Costco":["#005daa","CO"], "Pioneer":["#2a6f2a","PI"]
+  "Crevier":["#5a2d82","CR"], "Canadian Tire":["#d6001c","CT"], "Costco":["#005daa","CO"], "Mobil":["#1b3c8c","MO"]
 };
 function pastille(marque){
   const m = MARQUES[marque];
@@ -292,18 +365,32 @@ function pastille(marque){
   return `<span class="marque" style="background:${m ? m[0] : "#6b746e"}" aria-hidden="true">${esc(ini)}</span>`;
 }
 
+// ── Rabais : meilleur rabais applicable à une station ────────
+function rabaisPour(s){
+  let meilleur = null;
+  for (const r of R.rabais || []){
+    if (r.marque && r.c > 0 && r.marque === s.marque && (!meilleur || r.c > meilleur.c)) meilleur = r;
+  }
+  return meilleur;
+}
+// Prépare une station pour le carburant choisi : brut, rabais, net
+function avecPrix(s, extra){
+  const brut = s.prix[R.carburant];
+  const rb = rabaisPour(s);
+  return Object.assign({}, s, extra, { brut, rabais: rb, p: brut - (rb ? rb.c : 0) });
+}
+
 // ── Liens vers les apps de navigation ────────────────────────
-// Waze : lien universel, ouvre l'app Waze si elle est installée et lance la navigation.
 const APPS = {
-  waze:   { nom: "Waze",        lien: s => `https://waze.com/ul?ll=${s.lat}%2C${s.lon}&navigate=yes` },
-  plans:  { nom: "Plans",       lien: s => `https://maps.apple.com/?daddr=${s.lat},${s.lon}&dirflg=d` },
+  waze:   { nom: "Waze",   lien: s => `https://waze.com/ul?ll=${s.lat}%2C${s.lon}&navigate=yes` },
+  plans:  { nom: "Plans",  lien: s => `https://maps.apple.com/?daddr=${s.lat},${s.lon}&dirflg=d` },
   google: { nom: "Google", lien: s => `https://www.google.com/maps/dir/?api=1&destination=${s.lat}%2C${s.lon}&travelmode=driving` }
 };
-const lienPrefere = s => APPS[R.app] ? APPS[R.app].lien(s) : APPS.waze.lien(s);
-function boutonsApps(s, classePrincipal, classeAutre){
+const lienPrefere = s => (APPS[R.app] || APPS.waze).lien(s);
+function boutonsApps(s){
   const autres = Object.keys(APPS).filter(k => k !== R.app);
-  return `<a class="btn ${classePrincipal}" href="${lienPrefere(s)}" target="_blank" rel="noopener">Y aller · ${esc(APPS[R.app].nom)}</a>`
-    + autres.map(k => `<a class="btn ${classeAutre(k)}" href="${APPS[k].lien(s)}" target="_blank" rel="noopener">${esc(APPS[k].nom)}</a>`).join("");
+  return `<a class="btn principal" href="${lienPrefere(s)}" target="_blank" rel="noopener">Y aller · ${esc((APPS[R.app] || APPS.waze).nom)}</a>`
+    + autres.map(k => `<a class="btn autre" href="${APPS[k].lien(s)}" target="_blank" rel="noopener">${esc(APPS[k].nom)}</a>`).join("");
 }
 
 // ── Téléchargement des prix de la Régie ──────────────────────
@@ -311,7 +398,6 @@ async function chargerStations(force){
   if (!force && stations && Date.now() - chargeLe < MAX_AGE_MS) return;
   const rep = await fetch(URL_DONNEES, { cache: "no-cache" });
   if (!rep.ok) throw new Error("La Régie répond « " + rep.status + " ».");
-  // Normalement le navigateur décompresse tout seul (Content-Encoding: gzip). Sinon, on le fait.
   const octets = new Uint8Array(await rep.arrayBuffer());
   let geo;
   if (octets[0] === 0x1f && octets[1] === 0x8b && "DecompressionStream" in window){
@@ -321,6 +407,7 @@ async function chargerStations(force){
     geo = JSON.parse(new TextDecoder().decode(octets));
   }
   stations = [];
+  const sommes = {}, compte = {};
   for (const f of geo.features || []){
     const p = f.properties || {}, c = f.geometry && f.geometry.coordinates;
     if (!c || (p.Status && p.Status !== "En opération")) continue;
@@ -331,15 +418,30 @@ async function chargerStations(force){
       if (v > 50 && v < 500) prix[x.GasType] = v;
     }
     const adr = p.Address || "";
-    stations.push({
-      id: stations.length, nom: p.Name || "", marque: p.brand || "Indépendant", adresse: adr,
+    const marque = p.brand && p.brand !== "Aucun" ? p.brand : "Indépendant";
+    const s = {
+      id: stations.length, nom: p.Name || "", marque, adresse: adr, region: p.Region || "",
       ville: adr.includes(",") ? adr.slice(adr.lastIndexOf(",") + 1).trim() : "",
       lat: +c[1], lon: +c[0], prix
-    });
+    };
+    stations.push(s);
+    // Moyennes par région (pour dire si c'est un bon prix)
+    for (const [carb, v] of Object.entries(prix)){
+      const k = carb + "|" + s.region;
+      sommes[k] = (sommes[k] || 0) + v; compte[k] = (compte[k] || 0) + 1;
+    }
   }
+  moyennes = {};
+  for (const k in sommes){
+    const [carb, reg] = k.split("|");
+    (moyennes[carb] ||= {})[reg] = sommes[k] / compte[k];
+  }
+  const parMarque = {};
+  for (const s of stations) parMarque[s.marque] = (parMarque[s.marque] || 0) + 1;
+  marquesConnues = Object.keys(parMarque).sort((a, b) => parMarque[b] - parMarque[a]);
   genereLe = geo.metadata && geo.metadata.generated_at ? new Date(geo.metadata.generated_at) : null;
   chargeLe = Date.now();
-  routes = new Map(); routesPour = "";   // les id ont pu changer
+  routes = new Map(); routesPour = ""; trajet = null;   // les id ont pu changer
   remplirVilles();
 }
 
@@ -353,6 +455,11 @@ function remplirVilles(){
   }
   $("#villes").innerHTML = [...villes.keys()].sort((a, b) => a.localeCompare(b, "fr"))
     .map(n => `<option value="${esc(n)}"></option>`).join("");
+  remplirDestinations();
+}
+function remplirDestinations(){
+  const noms = [...(R.recentes || []).map(d => d.nom), ...[...villes.keys()].sort((a, b) => a.localeCompare(b, "fr"))];
+  $("#destinations").innerHTML = [...new Set(noms)].map(n => `<option value="${esc(n)}"></option>`).join("");
 }
 function positionVille(nom){
   if (!nom) return null;
@@ -379,117 +486,198 @@ function trouverPosition(){
   });
 }
 
+// ── Recherche d'une destination ──────────────────────────────
+// 1) une destination récente ; 2) une ville où il y a des stations ; 3) Nominatim (adresse)
+async function chercherDestination(q){
+  q = q.trim(); if (!q) return null;
+  const rec = (R.recentes || []).find(d => d.nom.localeCompare(q, "fr", { sensitivity: "base" }) === 0);
+  if (rec) return rec;
+  const v = positionVille(q);
+  if (v) return { nom: v.nom === v.nom.toUpperCase() ? v.nom.toLowerCase().replace(/(^|[\s-])\p{L}/gu, m => m.toUpperCase()) : v.nom, lat: v.lat, lon: v.lon };
+  const url = `${URL_ADRESSE}?format=jsonv2&limit=1&countrycodes=ca&accept-language=fr&q=${encodeURIComponent(q)}`;
+  const rep = await fetch(url);
+  if (!rep.ok) throw new Error("Recherche d'adresse indisponible (" + rep.status + ").");
+  const j = await rep.json();
+  if (!j.length) return null;
+  const nom = j[0].display_name.split(",").slice(0, 2).join(",").trim();
+  return { nom: nom || q, lat: +j[0].lat, lon: +j[0].lon };
+}
+function retenirDestination(d){
+  R.destination = d;
+  R.recentes = [d, ...(R.recentes || []).filter(x => x.nom !== d.nom)].slice(0, 6);
+  sauverReglages(); remplirDestinations();
+}
+
 // ── Vraies distances en auto (OSRM) ──────────────────────────
-// 1) on présélectionne à vol d'oiseau (la route est toujours plus longue que la ligne droite,
-//    donc une station à plus de X km en ligne droite est forcément à plus de X km en auto) ;
-// 2) on demande à OSRM la distance et le temps en auto vers ces stations.
-function candidats(){
-  const carb = R.carburant;
-  const liste = stations
-    .filter(s => s.prix[carb] != null && !(R.sansCostco && /costco/i.test(s.marque + " " + s.nom)))
-    .map(s => ({ s, vo: volOiseauKm(position, s) }))
-    .sort((a, b) => a.vo - b.vo);
-  const proches = liste.slice(0, 8);                      // pour trouver la plus proche même hors rayon
+async function osrm(chemin){
+  const ctl = new AbortController(); const minuterie = setTimeout(() => ctl.abort(), 12000);
+  try {
+    const rep = await fetch(URL_OSRM + chemin, { signal: ctl.signal });
+    const j = await rep.json();
+    if (j.code !== "Ok") throw new Error(j.message || j.code);
+    return j;
+  } finally { clearTimeout(minuterie); }
+}
+const coord = p => p.lon.toFixed(6) + "," + p.lat.toFixed(6);
+const clePosition = () => position.lat.toFixed(4) + "," + position.lon.toFixed(4);
+const stationOk = s => s.prix[R.carburant] != null && !(R.sansCostco && /costco/i.test(s.marque + " " + s.nom));
+
+// « Autour de moi » : présélection à vol d'oiseau (la route est toujours plus longue que la ligne droite)
+function candidatsAutour(){
+  const liste = stations.filter(stationOk).map(s => ({ s, vo: volOiseauKm(position, s) })).sort((a, b) => a.vo - b.vo);
+  const proches = liste.slice(0, 8);
   let dansRayon = liste.filter(x => x.vo <= R.rayon);
   if (dansRayon.length + proches.length > MAX_ROUTES){
-    // Trop de stations (ex. Montréal à 50 km) : on garde les plus proches + les moins chères
-    const parPrix = dansRayon.slice().sort((a, b) => a.s.prix[carb] - b.s.prix[carb]);
-    const garde = new Set([...dansRayon.slice(0, 50), ...parPrix.slice(0, 41)]);
-    dansRayon = [...garde];
+    const net = x => x.s.prix[R.carburant] - ((rabaisPour(x.s) || {}).c || 0);
+    const parPrix = dansRayon.slice().sort((a, b) => net(a) - net(b));
+    dansRayon = [...new Set([...dansRayon.slice(0, 50), ...parPrix.slice(0, 41)])];
   }
   const tout = new Map();
   for (const x of [...proches, ...dansRayon]) tout.set(x.s.id, x);
   return [...tout.values()];
 }
-
 async function calculerRoutes(cands){
-  const cle = position.lat.toFixed(4) + "," + position.lon.toFixed(4);
-  if (cle !== routesPour){ routes = new Map(); routesPour = cle; }
+  if (clePosition() !== routesPour){ routes = new Map(); routesPour = clePosition(); }
   const manquants = cands.filter(x => !routes.has(x.s.id));
   for (let i = 0; i < manquants.length; i += MAX_ROUTES){
     const lot = manquants.slice(i, i + MAX_ROUTES);
-    const coords = [position, ...lot.map(x => x.s)].map(p => p.lon.toFixed(6) + "," + p.lat.toFixed(6)).join(";");
     try {
-      const ctl = new AbortController(); const minuterie = setTimeout(() => ctl.abort(), 10000);
-      const rep = await fetch(`${URL_OSRM}/table/v1/driving/${coords}?sources=0&annotations=distance,duration`, { signal: ctl.signal });
-      clearTimeout(minuterie);
-      const j = await rep.json();
-      if (j.code !== "Ok") throw new Error(j.message || j.code);
+      const j = await osrm(`/table/v1/driving/${[position, ...lot.map(x => x.s)].map(coord).join(";")}?sources=0&annotations=distance,duration`);
       lot.forEach((x, k) => {
         const m = j.distances[0][k + 1], sec = j.durations[0][k + 1];
         routes.set(x.s.id, m == null ? { km: Infinity, min: null } : { km: m / 1000, min: sec / 60 });
       });
       osrmEnPanne = false;
     } catch(e){
-      // Secours : vol d'oiseau × 1,3, affiché avec « ≈ »
       osrmEnPanne = true;
       lot.forEach(x => routes.set(x.s.id, { km: x.vo * FACTEUR_SECOURS, min: null, approx: true }));
     }
   }
 }
 
-// ── Le calcul : plus proche, moins chère, meilleur choix ─────
-function analyser(cands){
-  const carb = R.carburant;
-  const toutes = cands
-    .map(x => Object.assign({}, x.s, routes.get(x.s.id), { p: x.s.prix[carb] }))
-    .filter(s => isFinite(s.km))
-    .sort((a, b) => a.km - b.km);
+// ── Économie nette par rapport à une station de référence ───
+// gain sur le prix (net, rabais compris) − essence brûlée pour les km en plus
+function economie(s, ref, kmEnPlus){
+  return (ref.p - s.p) / 100 * litresAMettre() - kmEnPlus * (R.conso / 100) * (s.p / 100);
+}
+
+// ── Analyse « Autour de moi » ────────────────────────────────
+async function analyserAutour(){
+  const cands = candidatsAutour();
+  if (cands.some(x => !routes.has(x.s.id)) || routesPour !== clePosition()) await calculerRoutes(cands);
+  const toutes = cands.map(x => avecPrix(x.s, routes.get(x.s.id))).filter(s => isFinite(s.km)).sort((a, b) => a.km - b.km);
   if (!toutes.length) return null;
-  const proche = toutes[0];
+  const ref = toutes[0];                                         // la plus proche
   const dansRayon = toutes.filter(s => s.km <= R.rayon);
-  // Coût d'un km de plus : aller-retour (2 km roulés) × consommation × prix du litre
-  const coutKm = prix => 2 * (R.conso / 100) * (prix / 100);
-  for (const s of toutes){
-    s.eco = (proche.p - s.p) / 100 * R.litres - (s.km - proche.km) * coutKm(s.p);
+  for (const s of toutes) s.eco = economie(s, ref, 2 * (s.km - ref.km));   // aller-retour
+  ref.eco = 0;
+  return bilan(ref, dansRayon, "La plus proche");
+}
+
+// ── Analyse « Sur ma route » ─────────────────────────────────
+// 1) on demande le trajet à OSRM ; 2) on garde les stations à moins de 2 km du tracé ;
+// 3) pour chacune : détour = (moi → station → destination) − (moi → destination).
+async function analyserRoute(){
+  const d = R.destination;
+  const cle = clePosition() + ">" + d.lat.toFixed(4) + "," + d.lon.toFixed(4) + ">" + R.carburant + ">" + (R.sansCostco ? 1 : 0);
+  if (!trajet || trajet.cle !== cle){
+    const r = await osrm(`/route/v1/driving/${coord(position)};${coord(d)}?overview=full&geometries=geojson`);
+    const ligne = r.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+    const km = r.routes[0].distance / 1000, min = r.routes[0].duration / 60;
+
+    // Projection simple en km autour de notre latitude, pour mesurer la distance au tracé
+    const kx = 111.32 * Math.cos(position.lat * Math.PI / 180), ky = 110.57;
+    const pts = ligne.map(([la, lo]) => [lo * kx, la * ky]);
+    let minLa = Infinity, maxLa = -Infinity, minLo = Infinity, maxLo = -Infinity;
+    for (const [la, lo] of ligne){ minLa = Math.min(minLa, la); maxLa = Math.max(maxLa, la); minLo = Math.min(minLo, lo); maxLo = Math.max(maxLo, lo); }
+    const marge = 0.05;
+    const proches = [];
+    for (const s of stations){
+      if (!stationOk(s) || s.lat < minLa - marge || s.lat > maxLa + marge || s.lon < minLo - marge || s.lon > maxLo + marge) continue;
+      const x = s.lon * kx, y = s.lat * ky;
+      let best = Infinity;
+      for (let i = 1; i < pts.length; i++){
+        const [x1, y1] = pts[i-1], [x2, y2] = pts[i];
+        const dx = x2 - x1, dy = y2 - y1, l2 = dx*dx + dy*dy;
+        const t = l2 ? Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / l2)) : 0;
+        const ex = x1 + t*dx - x, ey = y1 + t*dy - y, dd = ex*ex + ey*ey;
+        if (dd < best) best = dd;
+      }
+      if (Math.sqrt(best) <= TAMPON_ROUTE_KM) proches.push(s);
+    }
+    // OSRM : 100 points max → nous, destination + 98 stations (les moins chères si trop)
+    const net = s => s.prix[R.carburant] - ((rabaisPour(s) || {}).c || 0);
+    const garde = proches.sort((a, b) => net(a) - net(b)).slice(0, MAX_ROUTES - 1);
+    const infos = new Map();
+    if (garde.length){
+      const n = garde.length;
+      const idx = garde.map((_, i) => i + 2);
+      const j = await osrm(`/table/v1/driving/${[position, d, ...garde].map(coord).join(";")}`
+        + `?sources=${[0, ...idx].join(";")}&destinations=${[1, ...idx].join(";")}&annotations=distance,duration`);
+      // lignes : [moi, s1..sn] ; colonnes : [destination, s1..sn]
+      garde.forEach((s, i) => {
+        const allerKm = j.distances[0][i + 1], allerMin = j.durations[0][i + 1];
+        const suiteKm = j.distances[i + 1][0], suiteMin = j.durations[i + 1][0];
+        if (allerKm == null || suiteKm == null) return;
+        infos.set(s.id, {
+          km: allerKm / 1000, min: allerMin / 60,
+          detourKm: (allerKm + suiteKm) / 1000 - km, detourMin: (allerMin + suiteMin) / 60 - min
+        });
+      });
+    }
+    trajet = { cle, km, min, ligne, garde, infos, nbProches: proches.length };
   }
-  proche.eco = 0;
-  const moinsChere = dansRayon.length ? dansRayon.reduce((m, s) => (s.p < m.p || (s.p === m.p && s.km < m.km)) ? s : m) : null;
-  const meilleure = dansRayon.reduce((m, s) => s.eco > m.eco + 0.005 ? s : m, proche);
-  return { proche, moinsChere, meilleure, dansRayon, horsRayon: !dansRayon.length };
+  const toutes = trajet.garde.filter(s => trajet.infos.has(s.id)).map(s => avecPrix(s, trajet.infos.get(s.id)));
+  if (!toutes.length) return { vide: true };
+  // Référence : la station qui demande le moins de détour
+  const ref = toutes.reduce((m, s) => s.detourKm < m.detourKm ? s : m);
+  for (const s of toutes) s.eco = economie(s, ref, s.detourKm - ref.detourKm);
+  ref.eco = 0;
+  return bilan(ref, toutes, "Sans détour");
+}
+
+function bilan(ref, choix, nomRef){
+  const moinsChere = choix.length ? choix.reduce((m, s) => (s.p < m.p || (s.p === m.p && s.km < m.km)) ? s : m) : null;
+  const meilleure = choix.reduce((m, s) => s.eco > m.eco + 0.005 ? s : m, ref);
+  return { ref, nomRef, moinsChere, meilleure, choix, horsRayon: !choix.length };
 }
 
 // ── La petite carte ──────────────────────────────────────────
-let carte = null, coucheStations = null, coucheMoi = null, coucheTrajet = null, fond = null;
+let carte = null, coucheStations, coucheMoi, coucheTrajet, fond = null;
 const sombre = () => document.documentElement.dataset.theme === "dark" ||
   (document.documentElement.dataset.theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
 function initCarte(){
   if (carte || !window.L) return;
   $("#carte").hidden = false;
-  carte = L.map("carte", { zoomControl: false, attributionControl: true });
+  carte = L.map("carte", { zoomControl: false });
   L.control.zoom({ position: "bottomright" }).addTo(carte);
   carte.attributionControl.setPrefix(false);
-  mettreFond();
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", mettreFond);
+  fond = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(carte);
+  const majNuit = () => $("#carte").classList.toggle("nuit", sombre());
+  majNuit(); matchMedia("(prefers-color-scheme: dark)").addEventListener("change", majNuit);
   coucheTrajet = L.layerGroup().addTo(carte);
   coucheStations = L.layerGroup().addTo(carte);
   coucheMoi = L.layerGroup().addTo(carte);
 }
-function mettreFond(){
-  // Tuiles OpenStreetMap ; en mode sombre, on les assombrit par un filtre CSS
-  if (!fond) fond = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19, attribution: "© OpenStreetMap"
-  }).addTo(carte);
-  $("#carte").classList.toggle("nuit", sombre());
-}
 function popupStation(s){
-  return `<div class="pop"><div class="t">${esc(s.marque)} · ${fmtPrix(s.p)} ¢</div>
+  const rb = s.rabais ? ` (${fmtPrix(s.brut)} − ${s.rabais.c} ¢ ${esc(s.rabais.nom)})` : "";
+  return `<div class="pop"><div class="t">${esc(s.marque)} · ${fmtPrix(s.p)} ¢${rb}</div>
     <div class="s">${esc(s.adresse)}<br>${esc(fmtTrajet(s))}</div>
     <div class="btns">${Object.keys(APPS).map(k => `<a class="btn ${k}" href="${APPS[k].lien(s)}" target="_blank" rel="noopener">${esc(APPS[k].nom)}</a>`).join("")}</div></div>`;
 }
 function dessinerCarte(a){
   initCarte();
   if (!carte) return;
+  $("#carte").hidden = false;
   coucheStations.clearLayers(); coucheMoi.clearLayers();
   L.marker([position.lat, position.lon], { icon: L.divIcon({ className: "", html: '<div class="moi"></div>', iconSize: [16,16], iconAnchor: [8,8] }), interactive: false, zIndexOffset: 1000 }).addTo(coucheMoi);
   if (position.source === "gps" && position.precision > 50)
     L.circle([position.lat, position.lon], { radius: position.precision, color: "#1a73e8", weight: 1, fillOpacity: .08, interactive: false }).addTo(coucheMoi);
-  // Étiquette de prix : meilleur choix, plus proche, moins chère + les 6 meilleures économies.
-  // Les autres stations : un simple point (on peut le toucher pour voir le prix).
-  const tous = a.dansRayon.length ? a.dansRayon : [a.proche];
-  const etiquettes = new Set([a.meilleure.id, a.proche.id, a.moinsChere && a.moinsChere.id,
+
+  const tous = a.choix.length ? a.choix : [a.ref];
+  const etiquettes = new Set([a.meilleure.id, a.ref.id, a.moinsChere && a.moinsChere.id,
     ...tous.slice().sort((x, y) => y.eco - x.eco).slice(0, 6).map(s => s.id)]);
-  const aMontrer = tous.slice().sort((x, y) => etiquettes.has(x.id) - etiquettes.has(y.id) || y.p - x.p); // étiquettes par-dessus
+  const aMontrer = tous.slice().sort((x, y) => etiquettes.has(x.id) - etiquettes.has(y.id) || y.p - x.p);
   for (const s of aMontrer){
     const top = s.id === a.meilleure.id, etiq = etiquettes.has(s.id);
     L.marker([s.lat, s.lon], {
@@ -497,35 +685,50 @@ function dessinerCarte(a){
         ? L.divIcon({ className: "", html: `<span class="pin${top ? " top" : ""}">${fmtPrix(s.p)}</span>`, iconSize: [0,0], iconAnchor: [0,6] })
         : L.divIcon({ className: "", html: `<div class="point"></div>`, iconSize: [0,0] }),
       zIndexOffset: top ? 900 : etiq ? 500 : 0, keyboard: true, title: s.marque + " " + fmtPrix(s.p)
-    }).bindPopup(popupStation(s), { closeButton: true }).addTo(coucheStations);
+    }).bindPopup(popupStation(s)).addTo(coucheStations);
   }
-  // Cadrage : nous + meilleur choix + plus proche + moins chère
-  const pts = [[position.lat, position.lon], [a.meilleure.lat, a.meilleure.lon], [a.proche.lat, a.proche.lon]];
-  if (a.moinsChere) pts.push([a.moinsChere.lat, a.moinsChere.lon]);
   carte.invalidateSize();
-  carte.fitBounds(L.latLngBounds(pts), { padding: [36, 36], maxZoom: 15 });
-  dessinerTrajet(a.meilleure);
+  const couleur = sombre() ? "#4fc58b" : "#0e5a3c";
+  if (R.mode === "route" && trajet){
+    // Tout le trajet + le drapeau de la destination
+    coucheTrajet.clearLayers(); trajetDemande = "";
+    L.polyline(trajet.ligne, { color: couleur, weight: 5, opacity: .8, interactive: false }).addTo(coucheTrajet);
+    L.marker([R.destination.lat, R.destination.lon], { icon: L.divIcon({ className: "", html: '<div class="drapeau"></div>', iconSize: [0,0] }), interactive: false }).addTo(coucheMoi);
+    carte.fitBounds(L.latLngBounds(trajet.ligne), { padding: [24, 24] });
+  } else {
+    const pts = [[position.lat, position.lon], [a.meilleure.lat, a.meilleure.lon], [a.ref.lat, a.ref.lon]];
+    if (a.moinsChere) pts.push([a.moinsChere.lat, a.moinsChere.lon]);
+    carte.fitBounds(L.latLngBounds(pts), { padding: [36, 36], maxZoom: 15 });
+    dessinerTrajet(a.meilleure, couleur);
+  }
 }
-// Trace la route vers le meilleur choix (en plus, si OSRM répond)
 let trajetDemande = "";
-async function dessinerTrajet(s){
+async function dessinerTrajet(s, couleur){
   const cle = routesPour + ">" + s.id;
   if (cle === trajetDemande) return;
   trajetDemande = cle; coucheTrajet.clearLayers();
   if (s.approx) return;
   try {
-    const rep = await fetch(`${URL_OSRM}/route/v1/driving/${position.lon},${position.lat};${s.lon},${s.lat}?overview=full&geometries=geojson`);
-    const j = await rep.json();
-    if (cle !== trajetDemande || j.code !== "Ok") return;
-    const ligne = j.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-    L.polyline(ligne, { color: sombre() ? "#4fc58b" : "#0e5a3c", weight: 5, opacity: .85, interactive: false }).addTo(coucheTrajet);
+    const j = await osrm(`/route/v1/driving/${coord(position)};${coord(s)}?overview=full&geometries=geojson`);
+    if (cle !== trajetDemande) return;
+    L.polyline(j.routes[0].geometry.coordinates.map(c => [c[1], c[0]]), { color: couleur, weight: 5, opacity: .85, interactive: false }).addTo(coucheTrajet);
   } catch(e){ /* pas grave : la carte reste sans tracé */ }
 }
 
 // ── Affichage ────────────────────────────────────────────────
-const prixHtml = p => `${fmtPrix(p)}<small>¢</small>`;
-let dernierCalcul = 0;
+function prixHtml(s){
+  const brut = s.rabais ? `<span class="brut">${fmtPrix(s.brut)} ¢</span>` : "";
+  return `${brut}${fmtPrix(s.p)}<small>¢</small>`;
+}
+function bonPrix(s){
+  const moy = moyennes[R.carburant] && moyennes[R.carburant][s.region];
+  if (!moy) return "";
+  const ecart = s.p - moy;   // ton prix net (rabais compris) comparé au prix affiché moyen
+  if (Math.abs(ecart) < 0.5) return `Dans la moyenne · ${esc(s.region)}`;
+  return `${fmtPrix(Math.abs(ecart))} ¢ ${ecart < 0 ? "sous" : "au-dessus de"} la moyenne · ${esc(s.region)}`;
+}
 
+let dernierCalcul = 0;
 async function afficher(){
   const zone = $("#contenu");
   marquerBoutons();
@@ -542,48 +745,71 @@ async function afficher(){
     $("#m-ville").onclick = ouvrirReglages;
     return;
   }
-  const no = ++dernierCalcul;
-  const cands = candidats();
-  if (cands.some(x => !routes.has(x.s.id)) || routesPour !== position.lat.toFixed(4) + "," + position.lon.toFixed(4)){
-    if (!zone.querySelector(".charge")) zone.insertAdjacentHTML("afterbegin", `<div class="charge"><i></i></div>`);
-    await calculerRoutes(cands);
-    if (no !== dernierCalcul) return;   // un autre choix a été fait entre-temps
+  if (R.mode === "route" && !R.destination){
+    $("#carte").hidden = true;
+    zone.innerHTML = `<div class="msg"><p><strong>Où t'en vas-tu ?</strong></p>
+      <p>Entre une ville ou une adresse en haut. Je trouve la station la plus avantageuse le long du trajet, détour compris.</p></div>`;
+    return;
   }
-  const a = analyser(cands);
-  if (!a){ zone.innerHTML = `<div class="msg"><p>Aucune station ne vend de ce carburant près d'ici.</p></div>`; return; }
-  const { proche, moinsChere, meilleure, dansRayon } = a;
+  const no = ++dernierCalcul;
+  if (!zone.querySelector(".charge")) zone.insertAdjacentHTML("afterbegin", `<div class="charge"><i></i></div>`);
+  let a;
+  try {
+    a = R.mode === "route" ? await analyserRoute() : await analyserAutour();
+  } catch(e){
+    if (no !== dernierCalcul) return;
+    zone.innerHTML = `<div class="msg erreur"><p><strong>Calcul du trajet impossible.</strong></p><p>${esc(e.message)}</p>
+      <div class="btns"><button class="btn plein" id="m-reessayer">Réessayer</button></div></div>`;
+    $("#m-reessayer").onclick = () => afficher();
+    return;
+  }
+  if (no !== dernierCalcul) return;   // un autre choix a été fait entre-temps
+  majDestination();
+  if (!a || a.vide){
+    zone.innerHTML = `<div class="msg"><p>${R.mode === "route" ? "Aucune station ne vend ce carburant le long de ce trajet." : "Aucune station ne vend ce carburant près d'ici."}</p></div>`;
+    return;
+  }
+  const { ref, moinsChere, meilleure, choix } = a;
+  const L_ = litresAMettre();
 
   let pourquoi;
   if (a.horsRayon) pourquoi = `Aucune station à moins de ${R.rayon} km en auto : voici la plus proche.`;
-  else if (meilleure === proche){
-    pourquoi = moinsChere && moinsChere !== proche
-      ? `Aller à la moins chère (${fmtPrix(moinsChere.p)} ¢, ${fmtKm(moinsChere.km)}) ne vaut pas le détour pour ${R.litres} L.`
-      : `C'est la plus proche et la moins chère à moins de ${R.rayon} km.`;
+  else if (meilleure === ref){
+    pourquoi = moinsChere && moinsChere !== ref
+      ? `Aller à la moins chère (${fmtPrix(moinsChere.p)} ¢, ${fmtTrajet(moinsChere)}) ne vaut pas le détour pour ${L_} L.`
+      : (R.mode === "route" ? "La moins chère sur ton trajet, et sans détour." : `C'est la plus proche et la moins chère à moins de ${R.rayon} km.`);
   } else {
-    pourquoi = `Tu sauves environ <strong>${fmtArgent(meilleure.eco)}</strong> sur ${R.litres} L par rapport à la plus proche, détour compris.`;
+    pourquoi = `Tu sauves environ <strong>${fmtArgent(meilleure.eco)}</strong> sur ${L_} L par rapport à « ${a.nomRef.toLowerCase()} », détour compris.`;
   }
+  const puces = [];
+  const bp = bonPrix(meilleure); if (bp) puces.push(bp);
+  if (meilleure.rabais) puces.push(`−${meilleure.rabais.c} ¢ avec ${esc(meilleure.rabais.nom)}`);
+  puces.push(`${L_} L ≈ ${fmtArgent(L_ * meilleure.p / 100)}`);
 
+  const eyebrow = meilleure === ref ? (R.mode === "route" ? "Va ici · sans détour" : "Va ici · la plus proche") : "Va ici · meilleur choix";
   let html = `
   <section class="reco" aria-label="Recommandation">
-    <div class="eyebrow">${meilleure === proche ? "Va ici · la plus proche" : "Va ici · meilleur choix"}</div>
+    <div class="eyebrow">${eyebrow}</div>
     <div class="ligne">
       <div style="min-width:0">
         <div class="nom">${esc(meilleure.marque)} · ${esc(fmtTrajet(meilleure))}</div>
         <div class="adr">${esc(meilleure.adresse)}</div>
       </div>
-      <div class="prix">${prixHtml(meilleure.p)}</div>
+      <div class="prix">${prixHtml(meilleure)}</div>
     </div>
     <div class="pourquoi">${pourquoi}</div>
-    <div class="btns">${boutonsApps(meilleure, "principal", () => "autre")}</div>
+    <div class="puces">${puces.map(p => `<span class="puce">${p}</span>`).join("")}</div>
+    <div class="btns">${boutonsApps(meilleure)}</div>
   </section>
   <div class="duo">
-    ${carteMini("La plus proche", proche)}
-    ${moinsChere ? carteMini("Moins chère · " + R.rayon + " km", moinsChere)
+    ${carteMini(a.nomRef, ref)}
+    ${moinsChere ? carteMini(R.mode === "route" ? "Moins chère · trajet" : "Moins chère · " + R.rayon + " km", moinsChere)
       : `<div class="mini"><div class="eyebrow">Moins chère</div><div class="dist">Rien à moins de ${R.rayon} km</div></div>`}
   </div>`;
 
-  const liste = (dansRayon.length ? dansRayon : [proche]).slice().sort((x, y) => y.eco - x.eco || x.km - y.km).slice(0, TAILLE_LISTE);
-  html += `<h2>À moins de ${R.rayon} km <span>${dansRayon.length} station${dansRayon.length > 1 ? "s" : ""} · par économie</span></h2>
+  const liste = (choix.length ? choix : [ref]).slice().sort((x, y) => y.eco - x.eco || x.km - y.km).slice(0, TAILLE_LISTE);
+  const titre = R.mode === "route" ? "Sur ton trajet" : `À moins de ${R.rayon} km`;
+  html += `<h2>${titre} <span>${choix.length} station${choix.length > 1 ? "s" : ""} · par économie</span></h2>
   <ol class="liste">${liste.map(ligne).join("") || `<li class="vide">Aucune station.</li>`}</ol>`;
   zone.innerHTML = html;
   dessinerCarte(a);
@@ -593,8 +819,8 @@ async function afficher(){
 function carteMini(titre, s){
   return `<a class="mini" href="${lienPrefere(s)}" target="_blank" rel="noopener">
     <div class="eyebrow">${esc(titre)}</div>
-    <div class="prix">${prixHtml(s.p)}</div>
-    <div class="nom">${esc(s.marque)}</div>
+    <div class="prix">${fmtPrix(s.p)}<small>¢</small></div>
+    <div class="nom">${esc(s.marque)}${s.rabais ? `<span class="tag-rabais">−${s.rabais.c} ¢</span>` : ""}</div>
     <div class="dist">${esc(fmtTrajet(s))}</div></a>`;
 }
 
@@ -605,9 +831,20 @@ function ligne(s){
   else eco = `<div class="eco moins">référence</div>`;
   return `<li><a class="item" href="${lienPrefere(s)}" target="_blank" rel="noopener">
     ${pastille(s.marque)}
-    <div class="txt"><div class="nom">${esc(s.marque)} · ${esc(fmtTrajet(s))}</div>
-      <div class="sous">${esc(s.adresse)}</div></div>
+    <div class="txt"><div class="nom">${esc(s.marque)}${s.rabais ? `<span class="tag-rabais">−${s.rabais.c} ¢ ${esc(s.rabais.nom)}</span>` : ""}</div>
+      <div class="sous">${esc(fmtTrajet(s))} · ${esc(s.adresse)}</div></div>
     <div class="droite"><div class="p">${fmtPrix(s.p)}</div>${eco}</div></a></li>`;
+}
+
+function majDestination(){
+  const route = R.mode === "route", d = R.destination;
+  $("#seg-rayon").hidden = route;
+  $("#form-dest").hidden = !route || !!d;
+  $("#dest-choisie").hidden = !route || !d;
+  if (route && d){
+    $("#dest-nom").textContent = "Vers " + d.nom;
+    $("#dest-info").textContent = trajet ? `${fmtKm(trajet.km)} · ${fmtMin(trajet.min)} · stations à moins de ${TAMPON_ROUTE_KM} km du trajet` : "Calcul du trajet…";
+  }
 }
 
 function majStatut(){
@@ -617,13 +854,14 @@ function majStatut(){
     parts.push(min < 1 ? "Prix à l'instant" : `Prix il y a ${min} min`);
   }
   if (position) parts.push(position.source === "ville" ? "📍 " + position.nom : (position.precision > 500 ? "GPS approx." : "GPS"));
-  if (osrmEnPanne) parts.push("Distances approx.");
+  if (osrmEnPanne && R.mode === "autour") parts.push("Distances approx.");
   $("#statut").innerHTML = parts.map(esc).join("<br>");
 }
 
 function marquerBoutons(){
-  document.querySelectorAll("#seg-carburant button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === R.carburant));
-  document.querySelectorAll("#seg-rayon button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.v === +R.rayon));
+  const marque = (sel, val) => document.querySelectorAll(sel + " button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === String(val))));
+  marque("#seg-mode", R.mode); marque("#seg-carburant", R.carburant); marque("#seg-rayon", R.rayon); marque("#seg-niveau", R.niveau);
+  majDestination();
 }
 
 // ── Chargement complet ───────────────────────────────────────
@@ -633,7 +871,7 @@ async function rafraichir(forcerDonnees){
   const zone = $("#contenu");
   if (!zone.querySelector(".charge")) zone.insertAdjacentHTML("afterbegin", `<div class="charge"><i></i></div>`);
   try {
-    const [, pos] = await Promise.all([            // GPS et téléchargement en même temps
+    const [, pos] = await Promise.all([
       chargerStations(forcerDonnees),
       R.ville ? Promise.resolve(null) : trouverPosition()
     ]);
@@ -652,39 +890,76 @@ async function rafraichir(forcerDonnees){
 }
 
 // ── Réglages ─────────────────────────────────────────────────
+function ligneRabais(r){
+  const div = document.createElement("div");
+  div.className = "rabais-ligne";
+  const marques = [...new Set([r.marque, ...marquesConnues].filter(Boolean))];
+  div.innerHTML = `<input class="rb-nom" placeholder="Carte" aria-label="Nom de la carte" value="${esc(r.nom || "")}">
+    <select class="rb-marque" aria-label="Bannière">${marques.map(m => `<option${m === r.marque ? " selected" : ""}>${esc(m)}</option>`).join("")}</select>
+    <input class="rb-c" type="number" inputmode="decimal" min="0" max="50" step="0.5" aria-label="Rabais en cents par litre" value="${esc(r.c ?? 3)}">
+    <button type="button" aria-label="Retirer ce rabais">✕</button>`;
+  div.querySelector("button").onclick = () => div.remove();
+  return div;
+}
 function ouvrirReglages(){
-  $("#r-app").value = R.app; $("#r-litres").value = R.litres; $("#r-conso").value = R.conso;
+  $("#r-app").value = R.app; $("#r-reservoir").value = R.reservoir; $("#r-conso").value = R.conso;
   $("#r-ville").value = R.ville; $("#r-costco").checked = !!R.sansCostco;
+  const box = $("#r-rabais"); box.innerHTML = "";
+  for (const r of R.rabais || []) box.append(ligneRabais(r));
   $("#dlg-reglages").showModal();
 }
+$("#r-rabais-ajouter").onclick = () => $("#r-rabais").append(ligneRabais({ nom: "", marque: marquesConnues[0], c: 3 }));
 $("#dlg-reglages").addEventListener("close", () => {
   if ($("#dlg-reglages").returnValue !== "ok") return;
-  const num = (id, min, max, def) => { const v = parseFloat($(id).value.replace(",", ".")); return v >= min && v <= max ? v : def; };
-  R.app    = APPS[$("#r-app").value] ? $("#r-app").value : "waze";
-  R.litres = num("#r-litres", 5, 400, DEFAUTS.litres);
-  R.conso  = num("#r-conso", 2, 40, DEFAUTS.conso);
+  const num = (id, min, max, def) => { const v = parseFloat(String($(id).value).replace(",", ".")); return v >= min && v <= max ? v : def; };
+  R.app       = APPS[$("#r-app").value] ? $("#r-app").value : "waze";
+  R.reservoir = num("#r-reservoir", 10, 400, DEFAUTS.reservoir);
+  R.conso     = num("#r-conso", 2, 40, DEFAUTS.conso);
   R.sansCostco = $("#r-costco").checked;
+  R.rabais = [...document.querySelectorAll("#r-rabais .rabais-ligne")].map(div => ({
+    nom: div.querySelector(".rb-nom").value.trim() || "Rabais",
+    marque: div.querySelector(".rb-marque").value,
+    c: Math.max(0, Math.min(50, parseFloat(String(div.querySelector(".rb-c").value).replace(",", ".")) || 0))
+  })).filter(r => r.c > 0);
   const villeAvant = R.ville;
-  R.ville  = $("#r-ville").value.trim();
+  R.ville = $("#r-ville").value.trim();
   sauverReglages();
+  trajet = null;   // les rabais changent le choix des stations du trajet
   if (R.ville !== villeAvant) rafraichir(false); else afficher();
 });
 
 // ── Boutons ──────────────────────────────────────────────────
-$("#seg-carburant").addEventListener("click", e => {
-  const b = e.target.closest("button"); if (!b) return;
-  R.carburant = b.dataset.v; sauverReglages(); afficher();
-});
-$("#seg-rayon").addEventListener("click", e => {
-  const b = e.target.closest("button"); if (!b) return;
-  R.rayon = +b.dataset.v; sauverReglages(); afficher();
-});
-$("#btn-reglages").onclick = ouvrirReglages;
-$("#btn-rafraichir").onclick = () => rafraichir(true);
+function segment(id, applique){
+  $(id).addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    applique(b.dataset.v); sauverReglages(); afficher();
+  });
+}
+segment("#seg-mode", v => { R.mode = v; });
+segment("#seg-carburant", v => { R.carburant = v; });
+segment("#seg-rayon", v => { R.rayon = +v; });
+segment("#seg-niveau", v => { R.niveau = +v; });
 
-// En revenant dans l'app (ex. après Waze), on remet à jour si c'est vieux
+$("#form-dest").addEventListener("submit", async e => {
+  e.preventDefault();
+  const q = $("#dest-q").value;
+  const bouton = $("#form-dest button"); bouton.disabled = true; bouton.textContent = "…";
+  try {
+    const d = await chercherDestination(q);
+    if (!d){ $("#contenu").innerHTML = `<div class="msg erreur"><p>Je ne trouve pas « ${esc(q)} ». Essaie avec la ville, ex. « Magog » ou « 100 rue Principale, Magog ».</p></div>`; return; }
+    retenirDestination(d); $("#dest-q").value = ""; $("#dest-q").blur();
+    afficher();
+  } catch(err){
+    $("#contenu").innerHTML = `<div class="msg erreur"><p>${esc(err.message)}</p></div>`;
+  } finally { bouton.disabled = false; bouton.textContent = "Go"; }
+});
+$("#dest-effacer").onclick = () => { R.destination = null; trajet = null; sauverReglages(); afficher(); setTimeout(() => $("#dest-q").focus(), 50); };
+
+$("#btn-reglages").onclick = ouvrirReglages;
+$("#btn-rafraichir").onclick = () => { trajet = null; rafraichir(true); };
+
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && Date.now() - chargeLe > MAX_AGE_MS) rafraichir(true);
+  if (document.visibilityState === "visible" && Date.now() - chargeLe > MAX_AGE_MS){ trajet = null; rafraichir(true); }
 });
 setInterval(majStatut, 30000);
 
