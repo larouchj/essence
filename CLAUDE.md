@@ -39,6 +39,11 @@ on ne l'utilise pas (son API interne exige un jeton).
 - **Bon prix ?** : prix net vs prix affiché moyen de la région (calculé sur le fichier).
 - **Il me reste** Vide/¼/½/¾ × capacité réservoir (défaut 60 L) = litres à mettre. Consommation défaut 9 L/100 km.
 - **Y aller** : app préférée (défaut **Waze** `https://waze.com/ul?ll=LAT%2CLON&navigate=yes`), + Apple Plans, Google.
+- **Destination sans taper** (JF est d'habitude déjà dans Waze ; Waze n'a pas d'API pour lire le trajet en cours) :
+  bouton « Coller ma destination de Waze » (lit le presse-papier ; Waze → destination → Partager → Copier),
+  coller un lien waze.com dans la case part tout seul, ★ favoris + récentes en puces. `lireLienWaze` comprend
+  `ll=lat,lon`, `to=ll.lat,lon`, geohash `waze.com/ul/h…`, sinon cherche l'adresse écrite dans le texte.
+  **Format réel du lien partagé par le Waze de JF : pas encore vérifié** → demander un exemple si ça échoue.
 - Exclure Costco (membres), position manuelle (ville) si GPS refusé.
 - **Thèmes festifs** (demande de JF : « design festif qui change ») : choisis selon la date (`FETES` dans le script,
   couleurs dans le CSS `:root[data-fete=…]`). Noël 20 nov.–6 janv. (neige, guirlande, chapeau de neige,

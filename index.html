@@ -79,6 +79,14 @@ h1{font:700 1.6rem/1 var(--display);letter-spacing:.01em;margin:0}
 .dest-choisie .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dest-choisie .s{font-size:.8rem;color:var(--muted)}
 .dest-choisie button{border:0;background:var(--chip);border-radius:9px;width:34px;height:34px;flex:none}
+#dest-favori{font-size:1.15rem;color:#e0a800}
+.dest-rapides{display:flex;flex-wrap:wrap;gap:6px}
+.btn-waze{flex:1 1 100%;display:flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:12px;
+  font-weight:700;font-size:1rem;background:#33ccff;color:#06283d}
+.btn-waze svg{width:22px;height:22px}
+.dest-puce{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-weight:600;font-size:.88rem;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dest-puce.fav{border-color:#e0a800}
 
 /* Carte */
 #carte{height:250px;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:var(--chip);margin-bottom:12px;z-index:0}
@@ -291,8 +299,11 @@ h1{white-space:nowrap}
       <datalist id="destinations"></datalist>
       <button type="submit">Go</button>
     </form>
+    <!-- Destination en un tap : coller un lien Waze, favoris ★, récentes (rempli par dessinerRapides) -->
+    <div class="dest-rapides" id="dest-rapides" hidden></div>
     <div class="dest-choisie" id="dest-choisie" hidden>
       <div class="t"><div class="n" id="dest-nom"></div><div class="s" id="dest-info"></div></div>
+      <button type="button" id="dest-favori" aria-label="Ajouter aux favoris">☆</button>
       <button type="button" id="dest-effacer" aria-label="Changer de destination">✕</button>
     </div>
     <div class="rangee">
@@ -415,7 +426,7 @@ const TAMPON_ROUTE_KM = 2;           // « sur ma route » : stations à moins d
 // ── Réglages (gardés dans le téléphone) ──────────────────────
 const DEFAUTS = {
   mode: "autour", carburant: "Régulier", rayon: 10, niveau: 0.25, reservoir: 60, conso: 9,
-  ville: "", sansCostco: false, app: "waze", destination: null, recentes: [], fete: "auto",
+  ville: "", sansCostco: false, app: "waze", destination: null, recentes: [], favoris: [], fete: "auto",
   rabais: [ { nom: "RBC", marque: "Petro-Canada", c: 3 }, { nom: "CIBC", marque: "Ultramar", c: 3 } ]
 };
 function lireReglages(){
@@ -655,6 +666,7 @@ function trouverPosition(){
 // 1) une destination récente ; 2) une ville où il y a des stations ; 3) Nominatim (adresse)
 async function chercherDestination(q){
   q = q.trim(); if (!q) return null;
+  if (/waze\.com|^-?\d{1,2}\.\d+\s*,\s*-?\d{1,3}\.\d+$/i.test(q)) return lireLienWaze(q);
   const rec = (R.recentes || []).find(d => d.nom.localeCompare(q, "fr", { sensitivity: "base" }) === 0);
   if (rec) return rec;
   const v = positionVille(q);
@@ -672,6 +684,104 @@ function retenirDestination(d){
   R.recentes = [d, ...(R.recentes || []).filter(x => x.nom !== d.nom)].slice(0, 6);
   sauverReglages(); remplirDestinations();
 }
+
+// ── Destination copiée de Waze ───────────────────────────────
+// Dans Waze : toucher la destination → Partager → Copier. Le texte copié contient un lien
+// waze.com : selon la version, les coordonnées sont dans « ll=45.4,-71.9 », « to=ll.45.4,-71.9 »
+// ou codées en « geohash » (waze.com/ul/hf2m...). Sinon, on cherche l'adresse écrite dans le texte.
+function decoderGeohash(h){
+  const B = "0123456789bcdefghjkmnpqrstuvwxyz";
+  let lat = [-90, 90], lon = [-180, 180], pair = true;
+  for (const c of h.toLowerCase()){
+    const v = B.indexOf(c); if (v < 0) return null;
+    for (let bit = 4; bit >= 0; bit--){
+      const r = pair ? lon : lat, m = (r[0] + r[1]) / 2;
+      if ((v >> bit) & 1) r[0] = m; else r[1] = m;
+      pair = !pair;
+    }
+  }
+  return { lat: (lat[0] + lat[1]) / 2, lon: (lon[0] + lon[1]) / 2 };
+}
+async function lireLienWaze(texte){
+  const t = decodeURIComponent(texte.replace(/\+/g, " "));
+  let pos = null;
+  const m = t.match(/(?:ll|to=ll|latlng|q)[=.]\s*(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/i)   // ll=45.4,-71.9
+         || t.match(/(-?\d{1,2}\.\d{3,})\s*,\s*(-?\d{1,3}\.\d{3,})/);                       // 45.4012, -71.9123
+  if (m) pos = { lat: +m[1], lon: +m[2] };
+  if (!pos){
+    const g = t.match(/waze\.com\/ul\/h([0-9a-z]{5,12})/i);                                   // waze.com/ul/hf2m673
+    if (g) pos = decoderGeohash(g[1]);
+  }
+  // Le texte autour du lien (ex. « 123 rue Principale, Magog ») sert de nom, ou d'adresse à chercher
+  const reste = t.replace(/https?:\/\/\S+/g, " ")
+    .replace(/-?\d{1,2}\.\d+\s*,\s*-?\d{1,3}\.\d+/g, " ")   // les coordonnées ne font pas un bon nom
+    // phrases ajoutées par Waze devant le nom du lieu (français et anglais)
+    .replace(/^\s*(utilise waze pour (te rendre|aller|y aller)( à| au| aux| chez)?|je suis en route vers|je m'en vais à|use waze to (drive|navigate|get) to|on my way to|i'?m on my way to)\s*/i, "")
+    .replace(/\s+/g, " ").replace(/^[\s:,.-]+|[\s:,.-]+$/g, "");
+  const auQuebec = p => p.lat > 44 && p.lat < 63 && p.lon > -80 && p.lon < -57;
+  if (pos && auQuebec(pos)) return { nom: reste && reste.length <= 60 ? reste : await nomDuLieu(pos), lat: pos.lat, lon: pos.lon };
+  if (pos && !reste) throw new Error("Ce lien Waze pointe en dehors du Québec.");
+  if (reste && !/waze\.com/i.test(reste)) return chercherDestination(reste);
+  throw new Error("Je ne trouve pas la destination dans ce lien Waze. Écris plutôt la ville ou l'adresse.");
+}
+// Nom lisible pour des coordonnées (Nominatim « reverse ») ; « Destination Waze » si ça ne répond pas
+async function nomDuLieu(p){
+  try {
+    const rep = await fetch(`${URL_ADRESSE.replace("/search", "/reverse")}?format=jsonv2&zoom=17&accept-language=fr&lat=${p.lat}&lon=${p.lon}`);
+    const j = await rep.json(), a = j.address || {};
+    const rue = [a.house_number, a.road].filter(Boolean).join(" ");
+    const ville = a.city || a.town || a.village || a.municipality || "";
+    return j.name || [rue, ville].filter(Boolean).join(", ") || "Destination Waze";
+  } catch(e){ return "Destination Waze"; }
+}
+// Bouton « Coller de Waze » : lit le presse-papier (l'iPhone affiche une petite bulle « Coller » à toucher)
+async function collerDeWaze(){
+  let texte = "";
+  try { texte = await navigator.clipboard.readText(); } catch(e){}
+  if (!texte.trim()){
+    $("#dest-q").focus();
+    $("#contenu").innerHTML = `<div class="msg"><p>Je n'ai pas pu lire le presse-papier. Touche longuement la case en haut puis « Coller ».</p></div>`;
+    return;
+  }
+  await choisirDestinationTexte(texte);
+}
+async function choisirDestinationTexte(q){
+  const bouton = $("#form-dest button"); bouton.disabled = true; bouton.textContent = "…";
+  try {
+    const d = await chercherDestination(q);
+    if (!d){ $("#contenu").innerHTML = `<div class="msg erreur"><p>Je ne trouve pas « ${esc(q)} ». Essaie avec la ville, ex. « Magog » ou « 100 rue Principale, Magog ».</p></div>`; return; }
+    retenirDestination(d); $("#dest-q").value = ""; $("#dest-q").blur();
+    afficher();
+  } catch(err){
+    $("#contenu").innerHTML = `<div class="msg erreur"><p>${esc(err.message)}</p></div>`;
+  } finally { bouton.disabled = false; bouton.textContent = "Go"; }
+}
+
+// ── Favoris et récentes : une puce = un tap ──────────────────
+const memeLieu = (a, b) => a && b && Math.abs(a.lat - b.lat) < 1e-4 && Math.abs(a.lon - b.lon) < 1e-4;
+const estFavori = d => (R.favoris || []).some(f => memeLieu(f, d));
+function dessinerRapides(){
+  const fav = R.favoris || [];
+  const rec = (R.recentes || []).filter(d => !estFavori(d)).slice(0, 4);
+  const puce = (d, i, type) => `<button type="button" class="dest-puce${type === "fav" ? " fav" : ""}" data-type="${type}" data-i="${i}">${type === "fav" ? "★ " : "↺ "}${esc(d.nom)}</button>`;
+  $("#dest-rapides").innerHTML =
+    `<button type="button" class="btn-waze" id="btn-coller-waze">
+       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" stroke="#06283d" stroke-width="1.6" d="M12 3c5 0 9 3.5 9 8 0 3-2 5.5-5 6.7-.3 1.4-1.6 2.3-3 2.3-1.2 0-2.3-.7-2.8-1.8H9.5A2.9 2.9 0 0 1 4 17.5C2.6 16.2 3 14 3 11c0-4.5 4-8 9-8z"/><circle cx="9.5" cy="10" r="1.1" fill="#06283d"/><circle cx="14.5" cy="10" r="1.1" fill="#06283d"/><path d="M9 13.2c1.6 1.6 4.4 1.6 6 0" fill="none" stroke="#06283d" stroke-width="1.4" stroke-linecap="round"/></svg>
+       Coller ma destination de Waze</button>`
+    + fav.map((d, i) => puce(d, i, "fav")).join("") + rec.map((d, i) => puce(d, i, "rec")).join("");
+}
+$("#dest-rapides").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.id === "btn-coller-waze") return collerDeWaze();
+  const d = (b.dataset.type === "fav" ? R.favoris : R.recentes.filter(x => !estFavori(x)))[+b.dataset.i];
+  if (d){ retenirDestination(d); afficher(); }
+});
+// ☆ / ★ sur la destination choisie
+$("#dest-favori").onclick = () => {
+  const d = R.destination; if (!d) return;
+  R.favoris = estFavori(d) ? R.favoris.filter(f => !memeLieu(f, d)) : [...(R.favoris || []), { nom: d.nom, lat: d.lat, lon: d.lon }];
+  sauverReglages(); majDestination();
+};
 
 // ── Vraies distances en auto (OSRM) ──────────────────────────
 async function osrm(chemin){
@@ -913,7 +1023,10 @@ async function afficher(){
   if (R.mode === "route" && !R.destination){
     $("#carte").hidden = true;
     zone.innerHTML = `<div class="msg"><p><strong>Où t'en vas-tu ?</strong></p>
-      <p>Entre une ville ou une adresse en haut. Je trouve la station la plus avantageuse le long du trajet, détour compris.</p></div>`;
+      <p><strong>Déjà dans Waze ?</strong> Touche ta destination → <em>Partager</em> → <em>Copier</em>, reviens ici et touche
+        « Coller ma destination de Waze ».</p>
+      <p>Sinon, écris une ville ou une adresse, ou touche une destination ★ favorite. Je trouve la station la plus avantageuse
+        le long du trajet, détour compris.</p></div>`;
     return;
   }
   const no = ++dernierCalcul;
@@ -1006,7 +1119,12 @@ function majDestination(){
   $("#seg-rayon").hidden = route;
   $("#form-dest").hidden = !route || !!d;
   $("#dest-choisie").hidden = !route || !d;
+  $("#dest-rapides").hidden = !route || !!d;
+  if (route && !d) dessinerRapides();
   if (route && d){
+    const fav = estFavori(d);
+    $("#dest-favori").textContent = fav ? "★" : "☆";
+    $("#dest-favori").setAttribute("aria-label", fav ? "Retirer des favoris" : "Ajouter aux favoris");
     $("#dest-nom").textContent = "Vers " + d.nom;
     $("#dest-info").textContent = trajet ? `${fmtKm(trajet.km)} · ${fmtMin(trajet.min)} · stations à moins de ${TAMPON_ROUTE_KM} km du trajet` : "Calcul du trajet…";
   }
@@ -1140,16 +1258,12 @@ segment("#seg-niveau", v => { R.niveau = +v; });
 
 $("#form-dest").addEventListener("submit", async e => {
   e.preventDefault();
-  const q = $("#dest-q").value;
-  const bouton = $("#form-dest button"); bouton.disabled = true; bouton.textContent = "…";
-  try {
-    const d = await chercherDestination(q);
-    if (!d){ $("#contenu").innerHTML = `<div class="msg erreur"><p>Je ne trouve pas « ${esc(q)} ». Essaie avec la ville, ex. « Magog » ou « 100 rue Principale, Magog ».</p></div>`; return; }
-    retenirDestination(d); $("#dest-q").value = ""; $("#dest-q").blur();
-    afficher();
-  } catch(err){
-    $("#contenu").innerHTML = `<div class="msg erreur"><p>${esc(err.message)}</p></div>`;
-  } finally { bouton.disabled = false; bouton.textContent = "Go"; }
+  choisirDestinationTexte($("#dest-q").value);
+});
+// Lien Waze collé dans la case : on part tout de suite, pas besoin de toucher « Go »
+$("#dest-q").addEventListener("paste", e => {
+  const t = (e.clipboardData || window.clipboardData)?.getData("text") || "";
+  if (/waze\.com/i.test(t)){ e.preventDefault(); choisirDestinationTexte(t); }
 });
 $("#dest-effacer").onclick = () => { R.destination = null; trajet = null; sauverReglages(); afficher(); setTimeout(() => $("#dest-q").focus(), 50); };
 
