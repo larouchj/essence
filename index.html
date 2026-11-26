@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="fr-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plein futé</title>
+<meta name="description" content="Station d'essence la plus proche et la moins chère autour de toi, avec les prix de la Régie de l'énergie du Québec.">
+<meta name="theme-color" content="#0e5a3c">
+<!-- Pour l'écran d'accueil de l'iPhone : s'ouvre comme une app, sans barre Safari -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Plein futé">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icone-180.png">
+<link rel="icon" type="image/png" href="icone-192.png">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Mise en page : une seule colonne étroite, la recommandation en haut, la liste en dessous. */
+:root{
+  --bg:#f3f5f1; --surface:#ffffff; --fg:#17201b; --muted:#5d6a62; --line:#dde3dc;
+  --accent:#0e5a3c; --accent-fg:#ffffff; --accent-soft:#e1efe7;
+  --good:#167a43; --warn:#a05a00; --bad:#b3261e; --chip:#e9ede7; --sel:#ffffff;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1512; --surface:#18211c; --fg:#e8eee9; --muted:#9aa89f; --line:#2a352f;
+  --accent:#4fc58b; --accent-fg:#06281a; --accent-soft:#1d3428;
+  --good:#5fd394; --warn:#f0a94a; --bad:#ff8a80; --chip:#222d27; --sel:#3a4a41; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1512; --surface:#18211c; --fg:#e8eee9; --muted:#9aa89f; --line:#2a352f;
+  --accent:#4fc58b; --accent-fg:#06281a; --accent-soft:#1d3428;
+  --good:#5fd394; --warn:#f0a94a; --bad:#ff8a80; --chip:#222d27; --sel:#3a4a41; color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:16px/1.4 var(--body);
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));
+  -webkit-text-size-adjust:100%}
+.wrap{max-width:560px;margin:0 auto;padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 8px}
+h1{font:700 1.6rem/1 var(--display);letter-spacing:.01em;margin:0}
+.statut{font-size:.8rem;color:var(--muted);text-align:right}
+.icone-btn{background:var(--chip);border:0;border-radius:10px;width:40px;height:40px;display:grid;place-items:center;flex:none}
+.icone-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
+
+/* Contrôles : carburant + rayon */
+.controles{display:grid;gap:8px;margin-block:6px 14px}
+.seg{display:flex;background:var(--chip);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;border-radius:9px;padding:9px 4px;font-weight:600;font-size:.95rem;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--sel);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+
+/* Carte principale : la recommandation */
+.reco{background:var(--accent);color:var(--accent-fg);border-radius:18px;padding:16px 16px 14px;display:grid;gap:10px}
+.reco .eyebrow{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;font-weight:600;opacity:.85}
+.reco .ligne{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.reco .nom{font-weight:600;font-size:1.15rem;line-height:1.2;min-width:0}
+.reco .adr{font-size:.88rem;opacity:.85;min-width:0}
+.prix{font:700 2.6rem/0.9 var(--display);font-variant-numeric:tabular-nums;white-space:nowrap}
+.prix small{font-size:.45em;font-weight:600;margin-left:1px}
+.reco .pourquoi{font-size:.9rem;opacity:.95}
+.btns{display:flex;gap:8px}
+.btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:12px;padding:12px 10px;font-weight:600;text-decoration:none;font-size:.95rem;border:0}
+.reco .btn{background:var(--accent-fg);color:var(--accent)}
+.reco .btn.sec{background:transparent;color:var(--accent-fg);box-shadow:inset 0 0 0 1.5px currentColor}
+
+/* Deux petites cartes : plus proche / moins chère */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.mini{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:4px;text-align:left;min-width:0}
+.mini .eyebrow{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.mini .prix{font-size:2rem}
+.mini .nom{font-weight:600;font-size:.92rem;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini .dist{font-size:.82rem;color:var(--muted)}
+
+/* Liste */
+h2{font:700 1.2rem/1 var(--display);letter-spacing:.02em;margin:22px 0 8px;display:flex;justify-content:space-between;align-items:baseline}
+h2 span{font:500 .8rem var(--body);color:var(--muted)}
+ol.liste{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.liste li{border-top:1px solid var(--line)}
+.liste li:first-child{border-top:0}
+.liste a.item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:11px 12px;color:inherit;text-decoration:none}
+.marque{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font:700 .8rem var(--display);color:#fff;letter-spacing:.02em}
+.item .txt{min-width:0}
+.item .nom{font-weight:600;font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .sous{font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .droite{text-align:right}
+.item .p{font:700 1.45rem/1 var(--display);font-variant-numeric:tabular-nums}
+.item .eco{font-size:.75rem;font-weight:600;font-variant-numeric:tabular-nums}
+.eco.plus{color:var(--good)} .eco.moins{color:var(--muted)}
+.vide{padding:16px;color:var(--muted);text-align:center}
+
+/* Messages et réglages */
+.msg{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:10px}
+.msg.erreur{border-color:var(--bad)}
+.msg p{margin:0}
+.btn.plein{background:var(--accent);color:var(--accent-fg)}
+.btn.gris{background:var(--chip)}
+dialog{border:0;border-radius:18px;padding:0;background:var(--surface);color:var(--fg);width:min(92vw,440px);max-height:88vh}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.dlg{padding:18px;display:grid;gap:14px}
+.dlg h3{font:700 1.3rem var(--display);margin:0}
+.champ{display:grid;gap:4px}
+.champ label{font-weight:600;font-size:.9rem}
+.champ .aide{font-size:.8rem;color:var(--muted)}
+.champ input,.champ select{font:inherit;font-size:1rem;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%}
+.case{display:flex;gap:10px;align-items:center;font-weight:600;font-size:.9rem}
+.case input{width:22px;height:22px;accent-color:var(--accent)}
+.note{font-size:.78rem;color:var(--muted);line-height:1.45}
+.note a{color:inherit}
+.charge{height:4px;border-radius:2px;background:var(--chip);overflow:hidden;margin-bottom:10px}
+.charge i{display:block;height:100%;width:35%;background:var(--accent);animation:glisse 1.1s ease-in-out infinite}
+@keyframes glisse{from{transform:translateX(-100%)}to{transform:translateX(300%)}}
+@media (prefers-reduced-motion:reduce){.charge i{animation:none;width:100%}}
+footer{margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Plein futé</h1>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="statut" id="statut" aria-live="polite"></div>
+      <button class="icone-btn" id="btn-rafraichir" aria-label="Rafraîchir la position et les prix">
+        <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+      </button>
+      <button class="icone-btn" id="btn-reglages" aria-label="Réglages">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="controles">
+    <div class="seg" id="seg-carburant" role="group" aria-label="Carburant">
+      <button data-v="Régulier">Régulier</button>
+      <button data-v="Super">Super</button>
+      <button data-v="Diesel">Diesel</button>
+    </div>
+    <div class="seg" id="seg-rayon" role="group" aria-label="Rayon de recherche">
+      <button data-v="2">2 km</button>
+      <button data-v="5">5 km</button>
+      <button data-v="10">10 km</button>
+      <button data-v="25">25 km</button>
+      <button data-v="50">50 km</button>
+    </div>
+  </div>
+
+  <main id="contenu">
+    <div class="charge"><i></i></div>
+    <div class="msg"><p>Recherche de ta position et des prix…</p></div>
+  </main>
+
+  <footer class="note">
+    Prix publiés par la <a href="https://regieessencequebec.ca/" target="_blank" rel="noopener">Régie de l'énergie du Québec</a>
+    (déclarés par les stations, mis à jour aux 5 minutes). Le prix à la pompe peut différer. Distances à vol d'oiseau.
+  </footer>
+</div>
+
+<!-- Réglages -->
+<dialog id="dlg-reglages">
+  <form class="dlg" method="dialog" id="form-reglages">
+    <h3>Réglages</h3>
+    <div class="champ">
+      <label for="r-litres">Taille du plein (litres)</label>
+      <input id="r-litres" type="number" inputmode="decimal" min="5" max="400" step="1">
+      <div class="aide">Combien de litres tu mets d'habitude quand tu fais le plein.</div>
+    </div>
+    <div class="champ">
+      <label for="r-conso">Consommation (L/100 km)</label>
+      <input id="r-conso" type="number" inputmode="decimal" min="2" max="40" step="0.1">
+      <div class="aide">Sert à calculer ce que coûte le détour.</div>
+    </div>
+    <div class="champ">
+      <label for="r-route">Facteur route</label>
+      <input id="r-route" type="number" inputmode="decimal" min="1" max="2.5" step="0.05">
+      <div class="aide">La route est plus longue qu'à vol d'oiseau : 1,3 en ville, 1,4–1,6 à la campagne.</div>
+    </div>
+    <label class="case" for="r-costco"><input id="r-costco" type="checkbox"> Exclure Costco (membres seulement)</label>
+    <div class="champ">
+      <label for="r-ville">Position manuelle (si pas de GPS)</label>
+      <input id="r-ville" list="villes" placeholder="Ex. : Sherbrooke" autocomplete="off">
+      <datalist id="villes"></datalist>
+      <div class="aide">Laisse vide pour utiliser le GPS.</div>
+    </div>
+    <p class="note">L'économie nette = (prix de la station la plus proche − prix de la station) × litres − essence brûlée pour l'aller-retour en plus.</p>
+    <div class="btns">
+      <button class="btn gris" value="annuler" type="submit">Annuler</button>
+      <button class="btn plein" value="ok" type="submit" id="r-ok">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+// ─────────────────────────────────────────────────────────────
+//  Plein futé — trouve la station d'essence la plus avantageuse.
+//  Données : fichier GeoJSON public de la Régie de l'énergie
+//  (regieessencequebec.ca), regénéré aux 5 minutes.
+// ─────────────────────────────────────────────────────────────
+
+const URL_DONNEES = "https://regieessencequebec.ca/stations.geojson.gz";
+const MAX_AGE_MS  = 5 * 60 * 1000;   // on retélécharge si les données ont plus de 5 min
+const TAILLE_LISTE = 25;             // nombre de stations dans la liste
+
+// ── Réglages (gardés dans le téléphone) ──────────────────────
+const DEFAUTS = { carburant: "Régulier", rayon: 10, litres: 50, conso: 9, route: 1.3, ville: "", sansCostco: false };
+function lireReglages(){
+  try { return Object.assign({}, DEFAUTS, JSON.parse(localStorage.getItem("pleinfute") || "{}")); }
+  catch(e){ return Object.assign({}, DEFAUTS); }
+}
+function sauverReglages(){ try { localStorage.setItem("pleinfute", JSON.stringify(R)); } catch(e){} }
+const R = lireReglages();
+
+// ── État ─────────────────────────────────────────────────────
+let stations = null;     // [{nom, marque, adresse, ville, lat, lon, prix:{Régulier:166.4,...}}]
+let genereLe = null;     // Date de génération du fichier de la Régie
+let chargeLe = 0;        // quand on l'a téléchargé
+let position = null;     // {lat, lon, precision, source}
+let erreurGps = null;
+
+const $ = s => document.querySelector(s);
+
+// ── Outils ───────────────────────────────────────────────────
+// Distance à vol d'oiseau (km), formule de haversine
+function distanceKm(a, b){
+  const rad = Math.PI / 180, R_TERRE = 6371;
+  const dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
+  const h = Math.sin(dLat/2)**2 + Math.cos(a.lat*rad) * Math.cos(b.lat*rad) * Math.sin(dLon/2)**2;
+  return 2 * R_TERRE * Math.asin(Math.sqrt(h));
+}
+const nf1 = new Intl.NumberFormat("fr-CA", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const nf2 = new Intl.NumberFormat("fr-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtPrix = c => nf1.format(c);                       // 166,4
+const fmtKm   = km => km < 1 ? Math.round(km*1000) + " m" : nf1.format(km) + " km";
+const fmtArgent = d => nf2.format(Math.abs(d)) + " $";
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+// Couleur et initiales par bannière (pour reconnaître d'un coup d'œil)
+const MARQUES = {
+  "Esso":["#1f3f99","ES"], "Petro-Canada":["#c8102e","PC"], "Shell":["#d9a400","SH"], "Ultramar":["#0063a6","UL"],
+  "Harnois":["#0b7a3b","HA"], "Irving":["#004b87","IR"], "Sonic":["#e4572e","SO"], "Couche-Tard":["#d81e05","CT"],
+  "Crevier":["#5a2d82","CR"], "Canadian Tire":["#d6001c","CT"], "Costco":["#005daa","CO"], "Pioneer":["#2a6f2a","PI"]
+};
+function pastille(marque){
+  const m = MARQUES[marque];
+  const coul = m ? m[0] : "#6b746e";
+  const ini = m ? m[1] : (marque || "?").replace(/[^A-Za-zÀ-ÿ]/g, "").slice(0, 2).toUpperCase() || "?";
+  return `<span class="marque" style="background:${coul}" aria-hidden="true">${esc(ini)}</span>`;
+}
+
+// Liens d'itinéraire
+function lienApple(s){ return `https://maps.apple.com/?daddr=${s.lat},${s.lon}&dirflg=d`; }
+function lienGoogle(s){ return `https://www.google.com/maps/dir/?api=1&destination=${s.lat}%2C${s.lon}&travelmode=driving`; }
+const estApple = /iPhone|iPad|Macintosh/.test(navigator.userAgent);
+const lienPrincipal = s => estApple ? lienApple(s) : lienGoogle(s);
+
+// ── Téléchargement des données de la Régie ───────────────────
+async function chargerStations(force){
+  if (!force && stations && Date.now() - chargeLe < MAX_AGE_MS) return;
+  const rep = await fetch(URL_DONNEES, { cache: "no-cache" });
+  if (!rep.ok) throw new Error("La Régie répond « " + rep.status + " ».");
+  let geo;
+  // Le serveur envoie normalement le fichier avec « Content-Encoding: gzip » : le
+  // navigateur le décompresse tout seul. Sinon, on le décompresse nous-mêmes.
+  const octets = new Uint8Array(await rep.arrayBuffer());
+  if (octets[0] === 0x1f && octets[1] === 0x8b && "DecompressionStream" in window){
+    const flux = new Blob([octets]).stream().pipeThrough(new DecompressionStream("gzip"));
+    geo = JSON.parse(await new Response(flux).text());
+  } else {
+    geo = JSON.parse(new TextDecoder().decode(octets));
+  }
+  stations = [];
+  for (const f of geo.features || []){
+    const p = f.properties || {}, c = f.geometry && f.geometry.coordinates;
+    if (!c || p.Status && p.Status !== "En opération") continue;
+    const prix = {};
+    for (const x of p.Prices || []){
+      if (!x.IsAvailable || x.Price == null) continue;
+      const v = parseFloat(String(x.Price).replace(",", "."));   // « 166.4¢ » → 166.4
+      if (v > 50 && v < 500) prix[x.GasType] = v;               // on ignore les valeurs absurdes
+    }
+    const adr = p.Address || "";
+    stations.push({
+      nom: p.Name || "", marque: p.brand || "Indépendant", adresse: adr,
+      ville: adr.includes(",") ? adr.slice(adr.lastIndexOf(",") + 1).trim() : "",
+      lat: +c[1], lon: +c[0], prix
+    });
+  }
+  genereLe = geo.metadata && geo.metadata.generated_at ? new Date(geo.metadata.generated_at) : null;
+  chargeLe = Date.now();
+  remplirVilles();
+}
+
+// Liste des villes (pour la position manuelle) : centre des stations de chaque ville
+let villes = new Map();
+function remplirVilles(){
+  villes = new Map();
+  for (const s of stations){
+    if (!s.ville) continue;
+    const v = villes.get(s.ville) || { lat: 0, lon: 0, n: 0 };
+    v.lat += s.lat; v.lon += s.lon; v.n++; villes.set(s.ville, v);
+  }
+  const noms = [...villes.keys()].sort((a, b) => a.localeCompare(b, "fr"));
+  $("#villes").innerHTML = noms.map(n => `<option value="${esc(n)}"></option>`).join("");
+}
+function positionVille(nom){
+  if (!nom) return null;
+  const cle = [...villes.keys()].find(k => k.localeCompare(nom, "fr", { sensitivity: "base" }) === 0);
+  if (!cle) return null;
+  const v = villes.get(cle);
+  return { lat: v.lat / v.n, lon: v.lon / v.n, precision: 2000, source: "ville", nom: cle };
+}
+
+// ── Position GPS ─────────────────────────────────────────────
+function trouverPosition(){
+  return new Promise(res => {
+    if (!("geolocation" in navigator)){ erreurGps = "Ce navigateur ne donne pas la position."; return res(null); }
+    navigator.geolocation.getCurrentPosition(
+      p => { erreurGps = null; res({ lat: p.coords.latitude, lon: p.coords.longitude, precision: p.coords.accuracy, source: "gps" }); },
+      e => {
+        erreurGps = e.code === 1
+          ? "Tu as refusé l'accès à ta position. Sur iPhone : Réglages → Confidentialité → Service de localisation → Safari → « Lorsque l'app est active »."
+          : "Position introuvable pour l'instant (" + e.message + ").";
+        res(null);
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+    );
+  });
+}
+
+// ── Le calcul : plus proche, moins chère, meilleur choix ─────
+function analyser(){
+  const carb = R.carburant;
+  // Coût en $ pour faire 1 km de plus aller-retour (2 km roulés × facteur route)
+  const coutKm = prix => 2 * R.route * (R.conso / 100) * (prix / 100);
+
+  const toutes = stations
+    .filter(s => s.prix[carb] != null && !(R.sansCostco && /costco/i.test(s.marque + " " + s.nom)))
+    .map(s => Object.assign({}, s, { d: distanceKm(position, s), p: s.prix[carb] }))
+    .sort((a, b) => a.d - b.d);
+  if (!toutes.length) return null;
+
+  const proche = toutes[0];
+  const dansRayon = toutes.filter(s => s.d <= R.rayon);
+  // Économie nette par rapport à aller à la station la plus proche
+  for (const s of dansRayon){
+    const gainPrix = (proche.p - s.p) / 100 * R.litres;
+    const coutDetour = (s.d - proche.d) * coutKm(s.p);
+    s.eco = gainPrix - coutDetour;
+  }
+  proche.eco = 0;
+  const moinsChere = dansRayon.length
+    ? dansRayon.reduce((m, s) => (s.p < m.p || (s.p === m.p && s.d < m.d)) ? s : m)
+    : null;
+  const meilleure = dansRayon.length
+    ? dansRayon.reduce((m, s) => s.eco > m.eco + 0.005 ? s : m, proche)
+    : proche;
+  return { proche, moinsChere, meilleure, dansRayon, horsRayon: !dansRayon.length };
+}
+
+// ── Affichage ────────────────────────────────────────────────
+function prixHtml(p){ return `${fmtPrix(p)}<small>¢</small>`; }
+
+function afficher(){
+  const zone = $("#contenu");
+  marquerBoutons();
+  if (!stations){ return; }
+  if (!position){
+    zone.innerHTML = `<div class="msg erreur">
+      <p><strong>Je ne sais pas où tu es.</strong></p>
+      <p>${esc(erreurGps || "Position non disponible.")}</p>
+      <p>Tu peux aussi entrer une ville dans les réglages.</p>
+      <div class="btns"><button class="btn plein" id="m-reessayer">Réessayer le GPS</button>
+      <button class="btn gris" id="m-ville">Choisir une ville</button></div></div>`;
+    $("#m-reessayer").onclick = () => rafraichir(false);
+    $("#m-ville").onclick = ouvrirReglages;
+    return;
+  }
+  const a = analyser();
+  if (!a){ zone.innerHTML = `<div class="msg"><p>Aucune station ne vend de ${esc(R.carburant.toLowerCase())}.</p></div>`; return; }
+  const { proche, moinsChere, meilleure, dansRayon } = a;
+
+  // Phrase qui explique la recommandation
+  let pourquoi;
+  if (meilleure === proche){
+    pourquoi = moinsChere && moinsChere !== proche
+      ? `Aller à la moins chère (${fmtPrix(moinsChere.p)} ¢, ${fmtKm(moinsChere.d)}) ne vaut pas le détour pour ${R.litres} L.`
+      : `C'est la plus proche et la moins chère dans ${R.rayon} km.`;
+  } else {
+    pourquoi = `Tu sauves environ <strong>${fmtArgent(meilleure.eco)}</strong> sur ${R.litres} L par rapport à la plus proche, détour compris.`;
+  }
+  if (a.horsRayon) pourquoi = `Aucune station dans ${R.rayon} km : voici la plus proche.`;
+
+  const eyebrow = meilleure === proche ? "Va ici · la plus proche" : "Va ici · meilleur choix";
+  let html = `
+  <section class="reco" aria-label="Recommandation">
+    <div class="eyebrow">${eyebrow}</div>
+    <div class="ligne">
+      <div style="min-width:0">
+        <div class="nom">${esc(meilleure.marque)} · ${esc(fmtKm(meilleure.d))}</div>
+        <div class="adr">${esc(meilleure.adresse)}</div>
+      </div>
+      <div class="prix">${prixHtml(meilleure.p)}</div>
+    </div>
+    <div class="pourquoi">${pourquoi}</div>
+    <div class="btns">
+      <a class="btn" href="${lienPrincipal(meilleure)}" target="_blank" rel="noopener">Y aller</a>
+      <a class="btn sec" href="${estApple ? lienGoogle(meilleure) : lienApple(meilleure)}" target="_blank" rel="noopener">${estApple ? "Google Maps" : "Apple Plans"}</a>
+    </div>
+  </section>
+  <div class="duo">
+    ${carteMini("La plus proche", proche)}
+    ${moinsChere ? carteMini("Moins chère · " + R.rayon + " km", moinsChere) : `<div class="mini"><div class="eyebrow">Moins chère</div><div class="dist">Rien dans ${R.rayon} km</div></div>`}
+  </div>`;
+
+  // Liste triée par économie nette (donc par prix, en tenant compte du détour)
+  const liste = (dansRayon.length ? dansRayon : [proche]).slice().sort((x, y) => y.eco - x.eco || x.d - y.d).slice(0, TAILLE_LISTE);
+  html += `<h2>Dans ${R.rayon} km <span>${dansRayon.length} station${dansRayon.length > 1 ? "s" : ""} · triées par économie</span></h2>
+  <ol class="liste">${liste.map(ligne).join("") || `<li class="vide">Aucune station.</li>`}</ol>`;
+  zone.innerHTML = html;
+}
+
+function carteMini(titre, s){
+  return `<a class="mini" href="${lienPrincipal(s)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
+    <div class="eyebrow">${esc(titre)}</div>
+    <div class="prix">${prixHtml(s.p)}</div>
+    <div class="nom">${esc(s.marque)}</div>
+    <div class="dist">${esc(fmtKm(s.d))} · ${esc(s.ville)}</div></a>`;
+}
+
+function ligne(s){
+  let eco = "";
+  if (s.eco > 0.05) eco = `<div class="eco plus">−${fmtArgent(s.eco)}</div>`;
+  else if (s.eco < -0.05) eco = `<div class="eco moins">+${fmtArgent(s.eco)}</div>`;
+  else eco = `<div class="eco moins">référence</div>`;
+  return `<li><a class="item" href="${lienPrincipal(s)}" target="_blank" rel="noopener">
+    ${pastille(s.marque)}
+    <div class="txt"><div class="nom">${esc(s.marque)} · ${esc(fmtKm(s.d))}</div>
+      <div class="sous">${esc(s.adresse)}</div></div>
+    <div class="droite"><div class="p">${fmtPrix(s.p)}</div>${eco}</div></a></li>`;
+}
+
+function majStatut(){
+  const parts = [];
+  if (genereLe){
+    const min = Math.max(0, Math.round((Date.now() - genereLe) / 60000));
+    parts.push(min < 1 ? "Prix à l'instant" : `Prix il y a ${min} min`);
+  }
+  if (position) parts.push(position.source === "ville" ? "📍 " + position.nom : (position.precision > 500 ? "GPS approx." : "GPS"));
+  $("#statut").innerHTML = parts.map(esc).join("<br>");
+}
+
+function marquerBoutons(){
+  document.querySelectorAll("#seg-carburant button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === R.carburant));
+  document.querySelectorAll("#seg-rayon button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.v === +R.rayon));
+}
+
+// ── Chargement complet ───────────────────────────────────────
+let enCours = false;
+async function rafraichir(forcerDonnees){
+  if (enCours) return; enCours = true;
+  const zone = $("#contenu");
+  if (!zone.querySelector(".charge")) zone.insertAdjacentHTML("afterbegin", `<div class="charge"><i></i></div>`);
+  try {
+    // Les deux en même temps : le GPS et le téléchargement
+    const [, pos] = await Promise.all([
+      chargerStations(forcerDonnees),
+      R.ville ? Promise.resolve(null) : trouverPosition()
+    ]);
+    position = R.ville ? (positionVille(R.ville) || pos) : pos;
+    if (R.ville && !position) erreurGps = `Ville « ${R.ville} » introuvable dans la liste des stations.`;
+    afficher();
+  } catch(e){
+    zone.innerHTML = `<div class="msg erreur"><p><strong>Impossible d'avoir les prix.</strong></p>
+      <p>${esc(e.message)} Vérifie ta connexion Internet.</p>
+      <div class="btns"><button class="btn plein" id="m-reessayer">Réessayer</button></div></div>`;
+    $("#m-reessayer").onclick = () => rafraichir(true);
+  } finally {
+    enCours = false; majStatut();
+  }
+}
+
+// ── Réglages ─────────────────────────────────────────────────
+function ouvrirReglages(){
+  $("#r-litres").value = R.litres; $("#r-conso").value = R.conso; $("#r-route").value = R.route; $("#r-ville").value = R.ville; $("#r-costco").checked = !!R.sansCostco;
+  $("#dlg-reglages").showModal();
+}
+$("#dlg-reglages").addEventListener("close", () => {
+  if ($("#dlg-reglages").returnValue !== "ok") return;
+  const num = (id, min, max, def) => { const v = parseFloat($(id).value.replace(",", ".")); return v >= min && v <= max ? v : def; };
+  R.litres = num("#r-litres", 5, 400, DEFAUTS.litres);
+  R.conso  = num("#r-conso", 2, 40, DEFAUTS.conso);
+  R.route  = num("#r-route", 1, 2.5, DEFAUTS.route);
+  const villeAvant = R.ville;
+  R.ville  = $("#r-ville").value.trim();
+  R.sansCostco = $("#r-costco").checked;
+  sauverReglages();
+  if (R.ville !== villeAvant) rafraichir(false); else afficher();
+});
+
+// ── Boutons ──────────────────────────────────────────────────
+$("#seg-carburant").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  R.carburant = b.dataset.v; sauverReglages(); afficher();
+});
+$("#seg-rayon").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  R.rayon = +b.dataset.v; sauverReglages(); afficher();
+});
+$("#btn-reglages").onclick = ouvrirReglages;
+$("#btn-rafraichir").onclick = () => rafraichir(true);
+
+// Quand on revient dans l'app (ex. après Plans), on remet à jour si c'est vieux
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && Date.now() - chargeLe > MAX_AGE_MS) rafraichir(true);
+});
+setInterval(majStatut, 30000);
+
+marquerBoutons();
+rafraichir(true);
+</script>
+</body>
+</html>
